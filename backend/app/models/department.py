@@ -89,5 +89,41 @@ DEFAULT_DEPARTMENTS = [
     {
         'name': 'Cardiology',
         'description': 'Specializes in diagnosing and treating diseases of the heart and blood vessels, including heart attacks, arrhythmias, and heart failure.'
+    },
+    {
+        'name': 'Oncology',
+        'description': 'Dedicated to the diagnosis, treatment, and care of patients with cancer, including medical oncology, surgical oncology, and radiation oncology.'
+    },
+    {
+        'name': 'General Medicine',
+        'description': 'Provides comprehensive primary care for adults, treating a wide range of common illnesses and chronic conditions.'
+    },
+    {
+        'name': 'Orthopedics',
+        'description': 'Focuses on the diagnosis and treatment of disorders of the bones, joints, muscles, ligaments, and tendons.'
+    },
+    {
+        'name': 'Pediatrics',
+        'description': 'Specializes in medical care for infants, children, and adolescents, from birth through age 18.'
+    },
+    {
+        'name': 'Dermatology',
+        'description': 'Deals with diseases of the skin, hair, and nails, including conditions like acne, eczema, psoriasis, and skin cancer.'
+    },
+    {
+        'name': 'Neurology',
+        'description': 'Specializes in disorders of the nervous system, including the brain, spinal cord, and peripheral nerves.'
+    },
+    {
+        'name': 'Psychiatry',
+        'description': 'Focuses on the diagnosis, treatment, and prevention of mental, emotional, and behavioral disorders.'
+    },
+    {
+        'name': 'Gynecology',
+        'description': 'Specializes in women\'s reproductive health, including pregnancy, childbirth, and disorders of the reproductive system.'
+    },
+    {
+        'name': 'Ophthalmology',
+        'description': 'Deals with the diagnosis and treatment of eye disorders, including vision problems, cataracts, and glaucoma.'
     }
 ]
