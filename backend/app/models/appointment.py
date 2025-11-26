@@ -236,4 +236,40 @@ class Appointment(db.Model, TimestampMixin):
         ).all()
         return [apt.appointment_time for apt in appointments]
 
-    
+    @classmethod
+    def get_by_doctor_and_date(cls, doctor_id, appointment_date):
+        """Get all appointments for a doctor on a specific date."""
+        return cls.query.filter_by(
+            doctor_id=doctor_id,
+            appointment_date=appointment_date
+        ).order_by(cls.appointment_time).all()
+
+    @classmethod
+    def get_today_appointments(cls, doctor_id=None, patient_id=None):
+        """Get today's appointments for a doctor or patient."""
+        query = cls.query.filter_by(appointment_date=date.today())
+
+        if doctor_id:
+            query = query.filter_by(doctor_id=doctor_id)
+        if patient_id:
+            query = query.filter_by(patient_id=patient_id)
+
+        return query.order_by(cls.appointment_time).all()
+
+    @classmethod
+    def get_upcoming(cls, doctor_id=None, patient_id=None, days=7):
+        """Get upcoming appointments for next N days."""
+        end_date = date.today() + timedelta(days=days)
+
+        query = cls.query.filter(
+            cls.appointment_date >= date.today(),
+            cls.appointment_date <= end_date,
+            cls.status == 'booked'
+        )
+
+        if doctor_id:
+            query = query.filter_by(doctor_id=doctor_id)
+        if patient_id:
+            query = query.filter_by(patient_id=patient_id)
+
+        return query.order_by(cls.appointment_date, cls.appointment_time).all()
