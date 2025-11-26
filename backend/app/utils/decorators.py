@@ -93,3 +93,74 @@ def _create_role_decorator(required_roles=None):
     return decorator
 
 
+# Public decorators
+def login_required(fn):
+    """
+    Decorator to require authentication for a route.
+    Returns 401 if not authenticated.
+    """
+    return _create_role_decorator(required_roles=None)(fn)
+
+
+def roles_required(allowed_roles):
+    """
+    Decorator to require specific roles for a route.
+
+    Args:
+        allowed_roles: List of allowed role strings (e.g., ['admin', 'doctor'])
+
+    Usage:
+        @roles_required(['admin', 'doctor'])
+        def my_route():
+            pass
+    """
+    return _create_role_decorator(required_roles=allowed_roles)
+
+
+def admin_required(fn):
+    """
+    Decorator to require admin role for a route.
+    Shorthand for @roles_required(['admin'])
+    """
+    return _create_role_decorator(required_roles=['admin'])(fn)
+
+
+def doctor_required(fn):
+    """
+    Decorator to require doctor role for a route.
+    Shorthand for @roles_required(['doctor'])
+    """
+    return _create_role_decorator(required_roles=['doctor'])(fn)
+
+
+def patient_required(fn):
+    """
+    Decorator to require patient role for a route.
+    Shorthand for @roles_required(['patient'])
+    """
+    return _create_role_decorator(required_roles=['patient'])(fn)
+
+
+def admin_or_doctor_required(fn):
+    """
+    Decorator to require admin or doctor role for a route.
+    Shorthand for @roles_required(['admin', 'doctor'])
+    """
+    return _create_role_decorator(required_roles=['admin', 'doctor'])(fn)
+
+
+def get_current_user_from_request():
+    """
+    Helper function to get current user in a route.
+    Must be called within a route that has already verified JWT.
+
+    Returns:
+        User model instance or None
+    """
+    try:
+        identity = get_jwt_identity()
+        if identity:
+            return User.query.get(int(identity))
+        return None
+    except Exception:
+        return None
