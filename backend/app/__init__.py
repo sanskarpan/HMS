@@ -1,7 +1,8 @@
 """
 Hospital Management System Flask Application Factory.
 """
-from flask import Flask
+import os
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 
@@ -23,7 +24,17 @@ def create_app(config_class=None):
     Returns:
         Flask application instance
     """
-    app = Flask(__name__, instance_relative_config=True)
+    # Get the project root directory (parent of backend/)
+    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    project_root = os.path.dirname(backend_dir)
+    frontend_dir = os.path.join(project_root, 'frontend')
+
+    app = Flask(
+        __name__,
+        instance_relative_config=True,
+        static_folder=os.path.join(frontend_dir, 'static'),
+        static_url_path='/static'
+    )
 
     # Load configuration
     if config_class is None:
@@ -35,9 +46,30 @@ def create_app(config_class=None):
     jwt.init_app(app)
     CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-    # Register blueprints
+    # Register API blueprints
     from .routes import register_blueprints
     register_blueprints(app)
+
+    # Frontend routes - serve Vue SPA
+    @app.route('/')
+    def serve_index():
+        """Serve the main index.html"""
+        return send_from_directory(frontend_dir, 'index.html')
+
+    @app.route('/src/<path:filename>')
+    def serve_src(filename):
+        """Serve JavaScript source files from frontend/src/"""
+        return send_from_directory(os.path.join(frontend_dir, 'src'), filename)
+
+    @app.route('/<path:path>')
+    def serve_frontend(path):
+        """Serve frontend routes - always return index.html for SPA routing"""
+        # Don't handle API routes here
+        if path.startswith('api/'):
+            return {'error': 'Not found'}, 404
+
+        # For all other paths, serve index.html (Vue Router handles routing)
+        return send_from_directory(frontend_dir, 'index.html')
 
     # Create database tables
     with app.app_context():
