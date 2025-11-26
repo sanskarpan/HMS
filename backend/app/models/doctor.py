@@ -85,7 +85,16 @@ class Doctor(db.Model, TimestampMixin):
             Appointment.appointment_date == date.today()
         ).count()
 
-    
+    def get_appointments_for_date(self, date):
+        """Get all appointments for a specific date."""
+        from .appointment import Appointment
+        return self.appointments.filter(
+            Appointment.appointment_date == date
+        ).order_by(Appointment.appointment_time).all()
+
+    def get_availability_for_date(self, date):
+        """Get availability for a specific date."""
+        return self.availability.filter_by(date=date).first()
 
     def to_dict(self, include_user=False, include_department=True):
         """Convert doctor to dictionary representation."""
