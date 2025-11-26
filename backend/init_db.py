@@ -99,6 +99,22 @@ def seed_departments():
     else:
         print("All departments already exist.")
 
+
+def print_summary():
+    """Print summary of database contents."""
+    user_count = User.query.count()
+    dept_count = Department.query.count()
+
+    print("\n--- Database Summary ---")
+    print(f"Users: {user_count}")
+    print(f"Departments: {dept_count}")
+
+    # List departments
+    print("\nDepartments:")
+    for dept in Department.query.order_by(Department.name).all():
+        print(f"  - {dept.name}")
+
+
 if __name__ == '__main__':
     import argparse
 
