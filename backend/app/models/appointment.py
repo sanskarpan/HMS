@@ -210,4 +210,30 @@ class Appointment(db.Model, TimestampMixin):
     def __repr__(self):
         return f'<Appointment {self.id} Patient:{self.patient_id} Doctor:{self.doctor_id} {self.appointment_date}>'
 
+    @classmethod
+    def check_slot_available(cls, doctor_id, appointment_date, appointment_time):
+        """
+        Check if a time slot is available for a doctor.
+
+        Returns:
+            True if slot is available, False otherwise
+        """
+        existing = cls.query.filter_by(
+            doctor_id=doctor_id,
+            appointment_date=appointment_date,
+            appointment_time=appointment_time,
+            status='booked'
+        ).first()
+        return existing is None
+
+    @classmethod
+    def get_booked_slots(cls, doctor_id, appointment_date):
+        """Get all booked time slots for a doctor on a date."""
+        appointments = cls.query.filter_by(
+            doctor_id=doctor_id,
+            appointment_date=appointment_date,
+            status='booked'
+        ).all()
+        return [apt.appointment_time for apt in appointments]
+
     
