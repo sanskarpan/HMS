@@ -6,3 +6,6 @@ Hospitals need efficient systems to manage patients, doctors, appointments, and 
 
 ## Milestone 1 Completed: Database Models and Schema Setup
 **Progress: 15%**
+
+## Milestone 2: Authentication and Role-Based Access
+**Progress: 10%**
