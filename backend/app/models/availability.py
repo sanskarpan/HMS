@@ -138,6 +138,24 @@ class DoctorAvailability(db.Model, TimestampMixin):
     def __repr__(self):
         return f'<DoctorAvailability Doctor:{self.doctor_id} Date:{self.date}>'
 
+    @classmethod
+    def get_for_doctor_and_date(cls, doctor_id, date):
+        """Get availability for a specific doctor and date."""
+        return cls.query.filter_by(doctor_id=doctor_id, date=date).first()
+
+    @classmethod
+    def get_week_availability(cls, doctor_id, start_date=None):
+        """Get 7-day availability for a doctor starting from a date."""
+        if start_date is None:
+            start_date = date.today()
+
+        end_date = start_date + timedelta(days=7)
+
+        return cls.query.filter(
+            cls.doctor_id == doctor_id,
+            cls.date >= start_date,
+            cls.date < end_date
+        ).order_by(cls.date).all()
 
     @classmethod
     def set_availability(cls, doctor_id, availability_date, morning_start=None, morning_end=None,
