@@ -122,6 +122,41 @@ class Doctor(db.Model, TimestampMixin):
     def __repr__(self):
         return f'<Doctor {self.full_name}>'
 
+    @classmethod
+    def find_by_user_id(cls, user_id):
+        """Find doctor by user ID."""
+        return cls.query.filter_by(user_id=user_id).first()
+
+    @classmethod
+    def get_all_active(cls):
+        """Get all active doctors."""
+        return cls.query.filter_by(is_active=True).all()
+
+    @classmethod
+    def search(cls, query=None, department_id=None):
+        """Search doctors by name or filter by department."""
+        base_query = cls.query.filter_by(is_active=True)
+
+        if department_id:
+            base_query = base_query.filter_by(department_id=department_id)
+
+        if query:
+            search_term = f'%{query}%'
+            base_query = base_query.filter(
+                (cls.full_name.ilike(search_term)) |
+                (cls.qualification.ilike(search_term))
+            )
+
+        return base_query.order_by(cls.full_name).all()
+
+    @classmethod
+    def get_by_department(cls, department_id):
+        """Get all active doctors in a department."""
+        return cls.query.filter_by(
+            department_id=department_id,
+            is_active=True
+        ).order_by(cls.full_name).all()
+
 
 # Importing Appointment here to avoid circular imports
 from .appointment import Appointment
