@@ -81,6 +81,20 @@ class DoctorAvailability(db.Model, TimestampMixin):
 
         return slots
 
+    @property
+    def morning_slots(self):
+        """Get available morning time slots."""
+        return self._generate_slots(self.start_time_morning, self.end_time_morning)
+
+    @property
+    def evening_slots(self):
+        """Get available evening time slots."""
+        return self._generate_slots(self.start_time_evening, self.end_time_evening)
+
+    @property
+    def all_slots(self):
+        """Get all available time slots for the day."""
+        return self.morning_slots + self.evening_slots
 
     def get_available_slots(self, booked_times=None):
         """
