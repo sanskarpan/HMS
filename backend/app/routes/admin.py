@@ -353,3 +353,149 @@ def delete_doctor(doctor_id):
             'message': f'Error: {str(e)}'
         }), 500
 
+
+# ============================================================================
+# Patient Management
+# ============================================================================
+
+@admin_bp.route('/patients', methods=['GET'])
+@admin_required
+def get_all_patients():
+    """
+    Get all patients with optional filtering.
+
+    Query params:
+        search: Search by name, phone, or email
+        include_inactive: Include inactive patients (default: false)
+    """
+    search = request.args.get('search', '')
+    include_inactive = request.args.get('include_inactive', 'false').lower() == 'true'
+
+    query = Patient.query.join(User)
+
+    if not include_inactive:
+        query = query.filter(Patient.is_active == True)
+
+    if search:
+        search_term = f'%{search}%'
+        query = query.filter(
+            (Patient.full_name.ilike(search_term)) |
+            (Patient.phone.ilike(search_term)) |
+            (User.email.ilike(search_term))
+        )
+
+    patients = query.order_by(Patient.full_name).all()
+
+    return jsonify({
+        'success': True,
+        'patients': [p.to_dict(include_user=True) for p in patients],
+        'total': len(patients)
+    }), 200
+
+
+@admin_bp.route('/patients/<int:patient_id>', methods=['GET'])
+@admin_required
+def get_patient(patient_id):
+    """Get a specific patient's details with appointment history."""
+    patient = Patient.query.get(patient_id)
+
+    if not patient:
+        return jsonify({
+            'success': False,
+            'message': 'Patient not found'
+        }), 404
+
+    # Get appointment counts
+    total_appointments = patient.appointments.count()
+    completed_appointments = patient.appointments.filter_by(status='completed').count()
+
+    patient_data = patient.to_dict(include_user=True)
+    patient_data['appointment_stats'] = {
+        'total': total_appointments,
+        'completed': completed_appointments,
+        'upcoming': len(patient.upcoming_appointments)
+    }
+
+    return jsonify({
+        'success': True,
+        'patient': patient_data
+    }), 200
+
+
+@admin_bp.route('/patients/<int:patient_id>', methods=['PUT'])
+@admin_required
+def update_patient(patient_id):
+    """Update patient profile (admin can update any field)."""
+    patient = Patient.query.get(patient_id)
+
+    if not patient:
+        return jsonify({
+            'success': False,
+            'message': 'Patient not found'
+        }), 404
+
+    data = request.get_json()
+
+    # Update allowed fields
+    updatable_fields = [
+        'full_name', 'date_of_birth', 'gender', 'phone',
+        'address', 'emergency_contact', 'blood_group',
+        'medical_history', 'is_active'
+    ]
+
+    for field in updatable_fields:
+        if field in data:
+            value = data[field]
+            # Handle date conversion
+            if field == 'date_of_birth' and value:
+                value = datetime.strptime(value, '%Y-%m-%d').date()
+            setattr(patient, field, value)
+
+    try:
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'message': 'Patient updated successfully',
+            'patient': patient.to_dict()
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error updating patient: {str(e)}'
+        }), 500
+
+
+@admin_bp.route('/patients/<int:patient_id>/blacklist', methods=['POST'])
+@admin_required
+def blacklist_patient(patient_id):
+    """Blacklist a patient (disable login)."""
+    patient = Patient.query.get(patient_id)
+
+    if not patient:
+        return jsonify({
+            'success': False,
+            'message': 'Patient not found'
+        }), 404
+
+    data = request.get_json() or {}
+    blacklist = data.get('blacklist', True)
+
+    patient.user.is_blacklisted = blacklist
+    patient.is_active = not blacklist
+
+    try:
+        db.session.commit()
+        action = 'blacklisted' if blacklist else 'unblacklisted'
+        return jsonify({
+            'success': True,
+            'message': f'Patient {action} successfully'
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
