@@ -9,3 +9,6 @@ Hospitals need efficient systems to manage patients, doctors, appointments, and 
 
 ## Milestone 2: Authentication and Role-Based Access
 **Progress: 10%**
+
+## Milestone 3: Admin Dashboard and Management
+**Progress: 15%**
