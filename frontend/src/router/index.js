@@ -35,19 +35,19 @@ const routes = [
     {
         path: '/admin/doctors',
         name: 'AdminDoctors',
-        component: AdminDashboard, // TODO
+        component: DoctorManagement,
         meta: { requiresAuth: true, role: 'admin' }
     },
     {
         path: '/admin/patients',
         name: 'AdminPatients',
-        component: AdminDashboard, // TODO
+        component: PatientManagement,
         meta: { requiresAuth: true, role: 'admin' }
     },
     {
         path: '/admin/appointments',
         name: 'AdminAppointments',
-        component: AdminDashboard, // TODO
+        component: AppointmentManagement,
         meta: { requiresAuth: true, role: 'admin' }
     },
     {
