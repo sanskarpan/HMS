@@ -499,3 +499,238 @@ def blacklist_patient(patient_id):
             'success': False,
             'message': f'Error: {str(e)}'
         }), 500
+
+
+# ============================================================================
+# Appointment Management
+# ============================================================================
+
+@admin_bp.route('/appointments', methods=['GET'])
+@admin_required
+def get_all_appointments():
+    """
+    Get all appointments with filtering options.
+
+    Query params:
+        status: Filter by status (booked, completed, cancelled)
+        date: Filter by specific date (YYYY-MM-DD)
+        date_from: Filter from date
+        date_to: Filter to date
+        doctor_id: Filter by doctor
+        patient_id: Filter by patient
+        upcoming: If 'true', show only upcoming appointments
+    """
+    status = request.args.get('status')
+    date_filter = request.args.get('date')
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
+    doctor_id = request.args.get('doctor_id', type=int)
+    patient_id = request.args.get('patient_id', type=int)
+    upcoming = request.args.get('upcoming', 'false').lower() == 'true'
+
+    query = Appointment.query
+
+    if status:
+        query = query.filter_by(status=status)
+
+    if date_filter:
+        filter_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
+        query = query.filter_by(appointment_date=filter_date)
+
+    if date_from:
+        from_date = datetime.strptime(date_from, '%Y-%m-%d').date()
+        query = query.filter(Appointment.appointment_date >= from_date)
+
+    if date_to:
+        to_date = datetime.strptime(date_to, '%Y-%m-%d').date()
+        query = query.filter(Appointment.appointment_date <= to_date)
+
+    if doctor_id:
+        query = query.filter_by(doctor_id=doctor_id)
+
+    if patient_id:
+        query = query.filter_by(patient_id=patient_id)
+
+    if upcoming:
+        query = query.filter(
+            Appointment.appointment_date >= date.today(),
+            Appointment.status == 'booked'
+        )
+
+    appointments = query.order_by(
+        Appointment.appointment_date.desc(),
+        Appointment.appointment_time
+    ).all()
+
+    return jsonify({
+        'success': True,
+        'appointments': [
+            apt.to_dict(include_patient=True, include_doctor=True)
+            for apt in appointments
+        ],
+        'total': len(appointments)
+    }), 200
+
+
+@admin_bp.route('/appointments/<int:appointment_id>', methods=['GET'])
+@admin_required
+def get_appointment(appointment_id):
+    """Get a specific appointment's details."""
+    appointment = Appointment.query.get(appointment_id)
+
+    if not appointment:
+        return jsonify({
+            'success': False,
+            'message': 'Appointment not found'
+        }), 404
+
+    return jsonify({
+        'success': True,
+        'appointment': appointment.to_dict(
+            include_patient=True,
+            include_doctor=True,
+            include_treatment=True
+        )
+    }), 200
+
+
+@admin_bp.route('/appointments/<int:appointment_id>/cancel', methods=['POST'])
+@admin_required
+def cancel_appointment(appointment_id):
+    """Cancel an appointment (admin action)."""
+    appointment = Appointment.query.get(appointment_id)
+
+    if not appointment:
+        return jsonify({
+            'success': False,
+            'message': 'Appointment not found'
+        }), 404
+
+    if appointment.status != 'booked':
+        return jsonify({
+            'success': False,
+            'message': f'Cannot cancel appointment with status: {appointment.status}'
+        }), 400
+
+    data = request.get_json() or {}
+    reason = data.get('reason', 'Cancelled by admin')
+
+    try:
+        appointment.cancel(cancelled_by='admin', reason=reason)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Appointment cancelled successfully'
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
+
+
+# ============================================================================
+# Department Management
+# ============================================================================
+
+@admin_bp.route('/departments', methods=['GET'])
+@admin_required
+def get_departments():
+    """Get all departments with doctor counts."""
+    departments = Department.get_all_active()
+
+    return jsonify({
+        'success': True,
+        'departments': [dept.to_dict() for dept in departments]
+    }), 200
+
+
+@admin_bp.route('/departments', methods=['POST'])
+@admin_required
+def create_department():
+    """Create a new department."""
+    data = request.get_json()
+
+    if not data.get('name'):
+        return jsonify({
+            'success': False,
+            'message': 'Department name is required'
+        }), 400
+
+    # Check if department already exists
+    if Department.find_by_name(data['name']):
+        return jsonify({
+            'success': False,
+            'message': 'Department already exists'
+        }), 409
+
+    try:
+        department = Department(
+            name=data['name'],
+            description=data.get('description')
+        )
+        db.session.add(department)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Department created successfully',
+            'department': department.to_dict()
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
+
+
+@admin_bp.route('/departments/<int:dept_id>', methods=['PUT'])
+@admin_required
+def update_department(dept_id):
+    """Update a department."""
+    department = Department.query.get(dept_id)
+
+    if not department:
+        return jsonify({
+            'success': False,
+            'message': 'Department not found'
+        }), 404
+
+    data = request.get_json()
+
+    if 'name' in data:
+        # Check for duplicate name
+        existing = Department.find_by_name(data['name'])
+        if existing and existing.id != dept_id:
+            return jsonify({
+                'success': False,
+                'message': 'Department name already exists'
+            }), 409
+        department.name = data['name']
+
+    if 'description' in data:
+        department.description = data['description']
+
+    if 'is_active' in data:
+        department.is_active = data['is_active']
+
+    try:
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'message': 'Department updated successfully',
+            'department': department.to_dict()
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
+
