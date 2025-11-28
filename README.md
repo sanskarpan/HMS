@@ -12,3 +12,6 @@ Hospitals need efficient systems to manage patients, doctors, appointments, and 
 
 ## Milestone 3: Admin Dashboard and Management
 **Progress: 15%**
+
+## Milestone 4: Doctor Dashboard & Appointment/Treatment Management
+**Progress: 15%**
