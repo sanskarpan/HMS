@@ -67,25 +67,25 @@ const routes = [
     {
         path: '/doctor/appointments',
         name: 'DoctorAppointments',
-        component: DoctorDashboard, // TODO
+        component: DoctorAppointments,
         meta: { requiresAuth: true, role: 'doctor' }
     },
     {
         path: '/doctor/patients',
         name: 'DoctorPatients',
-        component: DoctorDashboard, // TODO
+        component: DoctorPatients,
         meta: { requiresAuth: true, role: 'doctor' }
     },
     {
         path: '/doctor/availability',
         name: 'DoctorAvailability',
-        component: DoctorDashboard, // TODO
+        component: DoctorAvailability,
         meta: { requiresAuth: true, role: 'doctor' }
     },
     {
         path: '/doctor/profile',
         name: 'DoctorProfile',
-        component: DoctorDashboard, // TODO
+        component: DoctorProfile,
         meta: { requiresAuth: true, role: 'doctor' }
     },
 
