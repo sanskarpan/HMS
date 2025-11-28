@@ -3,6 +3,7 @@ API Routes for the Hospital Management System.
 """
 from .auth import auth_bp
 from .admin import admin_bp
+from .doctor import doctor_bp
 
 
 def register_blueprints(app):
@@ -18,3 +19,6 @@ def register_blueprints(app):
 
     # Register admin routes
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
+
+    # Register doctor routes
+    app.register_blueprint(doctor_bp, url_prefix='/api/doctor')
