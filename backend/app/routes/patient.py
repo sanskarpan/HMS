@@ -7,7 +7,7 @@ from datetime import datetime, date, timedelta, time
 
 from backend.app.models import (
     db, User, Patient, Doctor, Department,
-    Appointment, Treatment, DoctorAvailability
+    Appointment, Treatment, DoctorAvailability, AppointmentStatusLog
 )
 from backend.app.utils import (
     patient_required,
@@ -415,7 +415,7 @@ def book_appointment():
             'message': 'You already have an appointment at this time'
         }), 409
 
-    # Create appointment
+    # Create appointment with status logging
     try:
         appointment = Appointment(
             patient_id=patient.id,
@@ -427,6 +427,17 @@ def book_appointment():
             duration=avail.slot_duration
         )
         db.session.add(appointment)
+        db.session.flush()  # Get the appointment ID
+
+        # Log initial status
+        AppointmentStatusLog.log_status_change(
+            appointment=appointment,
+            new_status='booked',
+            changed_by_role='patient',
+            changed_by_id=patient.id,
+            reason='Appointment created'
+        )
+
         db.session.commit()
 
         return jsonify({
@@ -436,6 +447,12 @@ def book_appointment():
         }), 201
     except Exception as e:
         db.session.rollback()
+        # Check if it's a unique constraint violation (double booking)
+        if 'UNIQUE constraint' in str(e) or 'unique_doctor_appointment_slot' in str(e):
+            return jsonify({
+                'success': False,
+                'message': 'This time slot was just booked by another patient'
+            }), 409
         return jsonify({'success': False, 'message': f'Booking failed: {str(e)}'}), 500
 
 
@@ -487,6 +504,15 @@ def cancel_appointment(appointment_id):
     reason = data.get('reason', 'Cancelled by patient')
 
     try:
+        # Log status change before cancelling
+        AppointmentStatusLog.log_status_change(
+            appointment=appointment,
+            new_status='cancelled',
+            changed_by_role='patient',
+            changed_by_id=patient.id,
+            reason=reason
+        )
+
         appointment.cancel(cancelled_by='patient', reason=reason)
         db.session.commit()
 
