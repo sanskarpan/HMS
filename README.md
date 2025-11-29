@@ -18,3 +18,6 @@ Hospitals need efficient systems to manage patients, doctors, appointments, and 
 
 ## Milestone 5: Patient Dashboard and Appointment System
 **Progress: 13%**
+
+## Milestone 6: Appointment History and Conflict Prevention
+**Progress: 12%**
