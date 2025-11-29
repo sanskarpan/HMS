@@ -6,7 +6,7 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime, date, time, timedelta
 
 from backend.app.models import (
-    db, User, Doctor, Patient, Appointment, Treatment, DoctorAvailability
+    db, User, Doctor, Patient, Appointment, Treatment, DoctorAvailability, AppointmentStatusLog
 )
 from backend.app.utils.decorators import doctor_required, get_current_user_from_request
 
@@ -236,6 +236,15 @@ def complete_appointment(appointment_id):
         }), 400
 
     try:
+        # Log status change
+        AppointmentStatusLog.log_status_change(
+            appointment=appointment,
+            new_status='completed',
+            changed_by_role='doctor',
+            changed_by_id=doctor.id,
+            reason=f'Diagnosis: {data["diagnosis"][:50]}...' if len(data['diagnosis']) > 50 else f'Diagnosis: {data["diagnosis"]}'
+        )
+
         # Mark appointment as completed
         appointment.complete()
 
@@ -297,6 +306,15 @@ def cancel_appointment(appointment_id):
     reason = data.get('reason', 'Cancelled by doctor')
 
     try:
+        # Log status change
+        AppointmentStatusLog.log_status_change(
+            appointment=appointment,
+            new_status='cancelled',
+            changed_by_role='doctor',
+            changed_by_id=doctor.id,
+            reason=reason
+        )
+
         appointment.cancel(cancelled_by='doctor', reason=reason)
         db.session.commit()
 
@@ -330,6 +348,15 @@ def mark_no_show(appointment_id):
         return jsonify({'success': False, 'message': 'Appointment not found'}), 404
 
     try:
+        # Log status change
+        AppointmentStatusLog.log_status_change(
+            appointment=appointment,
+            new_status='no_show',
+            changed_by_role='doctor',
+            changed_by_id=doctor.id,
+            reason='Patient did not attend'
+        )
+
         appointment.mark_no_show()
         db.session.commit()
 
