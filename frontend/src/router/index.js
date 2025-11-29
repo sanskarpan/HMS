@@ -99,31 +99,49 @@ const routes = [
     {
         path: '/patient/departments',
         name: 'PatientDepartments',
-        component: PatientDashboard, // TODO
+        component: DepartmentList,
         meta: { requiresAuth: true, role: 'patient' }
     },
     {
         path: '/patient/departments/:id',
         name: 'PatientDepartmentDetails',
-        component: PatientDashboard, // TODO
+        component: DepartmentDetails,
+        meta: { requiresAuth: true, role: 'patient' }
+    },
+    {
+        path: '/patient/doctors',
+        name: 'PatientDoctorSearch',
+        component: DoctorSearch,
+        meta: { requiresAuth: true, role: 'patient' }
+    },
+    {
+        path: '/patient/doctors/:id',
+        name: 'PatientDoctorDetails',
+        component: DoctorDetails,
         meta: { requiresAuth: true, role: 'patient' }
     },
     {
         path: '/patient/appointments',
         name: 'PatientAppointments',
-        component: PatientDashboard, // TODO
+        component: PatientAppointments,
         meta: { requiresAuth: true, role: 'patient' }
     },
     {
         path: '/patient/history',
         name: 'PatientHistory',
-        component: PatientDashboard, // TODO
+        component: PatientHistory,
+        meta: { requiresAuth: true, role: 'patient' }
+    },
+    {
+        path: '/patient/treatments',
+        name: 'PatientTreatments',
+        component: PatientTreatments,
         meta: { requiresAuth: true, role: 'patient' }
     },
     {
         path: '/patient/profile',
         name: 'PatientProfile',
-        component: PatientDashboard, // TODO
+        component: PatientProfile,
         meta: { requiresAuth: true, role: 'patient' }
     },
 
