@@ -95,6 +95,10 @@ const PatientManagement = {
                                                     title="View Details">
                                                 <i class="bi bi-eye"></i>
                                             </button>
+                                            <button class="btn btn-outline-success" @click="viewTreatmentHistory(patient)"
+                                                    title="Treatment History">
+                                                <i class="bi bi-file-medical"></i>
+                                            </button>
                                             <button class="btn btn-outline-primary" @click="editPatient(patient)"
                                                     title="Edit">
                                                 <i class="bi bi-pencil"></i>
@@ -297,6 +301,86 @@ const PatientManagement = {
             </div>
             <div class="modal-backdrop fade show" v-if="showEditModal"></div>
 
+            <!-- Treatment History Modal -->
+            <div class="modal fade" :class="{'show d-block': showTreatmentModal}" tabindex="-1" v-if="showTreatmentModal">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="bi bi-file-medical me-2"></i>
+                                Treatment History - {{ selectedPatient?.full_name }}
+                            </h5>
+                            <button type="button" class="btn-close" @click="showTreatmentModal = false"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div v-if="loadingTreatments" class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                            <div v-else-if="treatments.length === 0" class="text-center py-4 text-muted">
+                                <i class="bi bi-folder-x display-4"></i>
+                                <p class="mt-2">No treatment records found</p>
+                            </div>
+                            <div v-else class="accordion" id="treatmentAccordion">
+                                <div class="accordion-item" v-for="(treatment, index) in treatments" :key="treatment.id">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button"
+                                                :data-bs-toggle="'collapse'" :data-bs-target="'#treatment' + treatment.id">
+                                            <div class="d-flex w-100 justify-content-between align-items-center me-3">
+                                                <span>
+                                                    <strong>{{ formatDate(treatment.appointment?.date) }}</strong>
+                                                    <span class="text-muted ms-2">{{ treatment.visit_type }}</span>
+                                                </span>
+                                                <span class="badge bg-primary">
+                                                    Dr. {{ treatment.appointment?.doctor_name || 'N/A' }}
+                                                </span>
+                                            </div>
+                                        </button>
+                                    </h2>
+                                    <div :id="'treatment' + treatment.id" class="accordion-collapse collapse">
+                                        <div class="accordion-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h6 class="text-primary">Diagnosis</h6>
+                                                    <p>{{ treatment.diagnosis }}</p>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6 class="text-primary">Prescription</h6>
+                                                    <pre class="bg-light p-2 rounded small" style="white-space: pre-wrap;">{{ treatment.prescription || 'None' }}</pre>
+                                                </div>
+                                            </div>
+                                            <div class="row mt-3" v-if="treatment.tests_recommended || treatment.notes">
+                                                <div class="col-md-6" v-if="treatment.tests_recommended">
+                                                    <h6 class="text-primary">Tests Recommended</h6>
+                                                    <p>{{ treatment.tests_recommended }}</p>
+                                                </div>
+                                                <div class="col-md-6" v-if="treatment.notes">
+                                                    <h6 class="text-primary">Doctor's Notes</h6>
+                                                    <p class="text-muted">{{ treatment.notes }}</p>
+                                                </div>
+                                            </div>
+                                            <div v-if="treatment.follow_up_date" class="mt-2">
+                                                <span class="badge bg-info">
+                                                    <i class="bi bi-calendar-check me-1"></i>
+                                                    Follow-up: {{ formatDate(treatment.follow_up_date) }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @click="showTreatmentModal = false">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-backdrop fade show" v-if="showTreatmentModal"></div>
+
             <!-- Toast Notification -->
             <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
                 <div class="toast align-items-center text-white border-0" :class="toastClass"
@@ -320,13 +404,16 @@ const PatientManagement = {
             includeInactive: false,
             showViewModal: false,
             showEditModal: false,
+            showTreatmentModal: false,
             selectedPatient: null,
             patientForm: {},
             formError: null,
             showToast: false,
             toastMessage: '',
             toastClass: 'bg-success',
-            searchTimeout: null
+            searchTimeout: null,
+            treatments: [],
+            loadingTreatments: false
         };
     },
 
@@ -426,6 +513,29 @@ const PatientManagement = {
             } else {
                 this.showToastMessage(response.message || 'Failed to unblacklist', 'bg-danger');
             }
+        },
+
+        async viewTreatmentHistory(patient) {
+            this.selectedPatient = patient;
+            this.treatments = [];
+            this.loadingTreatments = true;
+            this.showTreatmentModal = true;
+
+            const response = await adminService.getPatientTreatments(patient.id);
+            if (response.success) {
+                this.treatments = response.treatments;
+            }
+            this.loadingTreatments = false;
+        },
+
+        formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
         },
 
         showToastMessage(message, className = 'bg-success') {
