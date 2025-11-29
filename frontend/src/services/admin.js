@@ -105,6 +105,30 @@ const adminService = {
         return await api.post(`/admin/patients/${patientId}/blacklist`, { blacklist });
     },
 
+    /**
+     * Get patient's appointment history.
+     */
+    async getPatientAppointments(patientId, params = {}) {
+        const queryParams = new URLSearchParams();
+        if (params.status) queryParams.append('status', params.status);
+        const query = queryParams.toString();
+        return await api.get(`/admin/patients/${patientId}/appointments${query ? '?' + query : ''}`);
+    },
+
+    /**
+     * Get patient's treatment records.
+     */
+    async getPatientTreatments(patientId) {
+        return await api.get(`/admin/patients/${patientId}/treatments`);
+    },
+
+    /**
+     * Get a specific treatment record.
+     */
+    async getTreatment(treatmentId) {
+        return await api.get(`/admin/treatments/${treatmentId}`);
+    },
+
     // ========================================================================
     // Appointment Management
     // ========================================================================
@@ -138,6 +162,13 @@ const adminService = {
      */
     async cancelAppointment(appointmentId, reason = '') {
         return await api.post(`/admin/appointments/${appointmentId}/cancel`, { reason });
+    },
+
+    /**
+     * Get appointment status change history.
+     */
+    async getAppointmentStatusHistory(appointmentId) {
+        return await api.get(`/admin/appointments/${appointmentId}/status-history`);
     },
 
     // ========================================================================
