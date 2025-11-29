@@ -291,3 +291,363 @@ def get_doctor_slots(doctor_id):
         'slots': [s.strftime('%H:%M') for s in available_slots]
     }), 200
 
+
+# =============================================================================
+# Appointment Booking System
+# =============================================================================
+
+@patient_bp.route('/appointments', methods=['GET'])
+@patient_required
+def get_appointments():
+    """Get patient's appointments with filtering."""
+    patient = get_current_patient()
+    if not patient:
+        return jsonify({'success': False, 'message': 'Patient profile not found'}), 404
+
+    status = request.args.get('status')
+    period = request.args.get('period')  # upcoming, past, today
+
+    query = Appointment.query.filter_by(patient_id=patient.id)
+
+    today = date.today()
+
+    if status:
+        query = query.filter_by(status=status)
+
+    if period == 'upcoming':
+        query = query.filter(
+            Appointment.appointment_date >= today,
+            Appointment.status == 'booked'
+        )
+    elif period == 'past':
+        query = query.filter(
+            (Appointment.appointment_date < today) |
+            (Appointment.status.in_(['completed', 'cancelled', 'no_show']))
+        )
+    elif period == 'today':
+        query = query.filter(Appointment.appointment_date == today)
+
+    appointments = query.order_by(
+        Appointment.appointment_date.desc(),
+        Appointment.appointment_time
+    ).all()
+
+    return jsonify({
+        'success': True,
+        'appointments': [apt.to_dict(include_doctor=True, include_treatment=True) for apt in appointments]
+    }), 200
+
+
+@patient_bp.route('/appointments', methods=['POST'])
+@patient_required
+def book_appointment():
+    """Book a new appointment."""
+    patient = get_current_patient()
+    if not patient:
+        return jsonify({'success': False, 'message': 'Patient profile not found'}), 404
+
+    data = request.get_json()
+
+    # Validate required fields
+    doctor_id = data.get('doctor_id')
+    appointment_date_str = data.get('appointment_date')
+    appointment_time_str = data.get('appointment_time')
+    reason = data.get('reason', '')
+
+    if not all([doctor_id, appointment_date_str, appointment_time_str]):
+        return jsonify({
+            'success': False,
+            'message': 'Doctor ID, date, and time are required'
+        }), 400
+
+    # Validate doctor
+    doctor = Doctor.query.filter_by(id=doctor_id, is_active=True).first()
+    if not doctor:
+        return jsonify({'success': False, 'message': 'Doctor not found'}), 404
+
+    # Parse date and time
+    try:
+        appointment_date = datetime.strptime(appointment_date_str, '%Y-%m-%d').date()
+        appointment_time = datetime.strptime(appointment_time_str, '%H:%M').time()
+    except ValueError:
+        return jsonify({
+            'success': False,
+            'message': 'Invalid date or time format. Use YYYY-MM-DD and HH:MM'
+        }), 400
+
+    # Validate date is not in the past
+    if appointment_date < date.today():
+        return jsonify({'success': False, 'message': 'Cannot book appointments in the past'}), 400
+
+    # Check doctor availability
+    avail = DoctorAvailability.get_for_doctor_and_date(doctor_id, appointment_date)
+    if not avail or not avail.is_available:
+        return jsonify({
+            'success': False,
+            'message': 'Doctor is not available on this date'
+        }), 400
+
+    # Check if slot is within available hours
+    if not avail.is_slot_available(appointment_time):
+        return jsonify({
+            'success': False,
+            'message': 'Selected time is outside available hours'
+        }), 400
+
+    # Check for double booking (conflict prevention)
+    if not Appointment.check_slot_available(doctor_id, appointment_date, appointment_time):
+        return jsonify({
+            'success': False,
+            'message': 'This time slot is already booked'
+        }), 409
+
+    # Check if patient already has an appointment at this time
+    existing_patient_apt = Appointment.query.filter(
+        Appointment.patient_id == patient.id,
+        Appointment.appointment_date == appointment_date,
+        Appointment.appointment_time == appointment_time,
+        Appointment.status == 'booked'
+    ).first()
+
+    if existing_patient_apt:
+        return jsonify({
+            'success': False,
+            'message': 'You already have an appointment at this time'
+        }), 409
+
+    # Create appointment
+    try:
+        appointment = Appointment(
+            patient_id=patient.id,
+            doctor_id=doctor_id,
+            department_id=doctor.department_id,
+            appointment_date=appointment_date,
+            appointment_time=appointment_time,
+            reason=reason,
+            duration=avail.slot_duration
+        )
+        db.session.add(appointment)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Appointment booked successfully',
+            'appointment': appointment.to_dict(include_doctor=True)
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Booking failed: {str(e)}'}), 500
+
+
+@patient_bp.route('/appointments/<int:appointment_id>', methods=['GET'])
+@patient_required
+def get_appointment_details(appointment_id):
+    """Get specific appointment details."""
+    patient = get_current_patient()
+    if not patient:
+        return jsonify({'success': False, 'message': 'Patient profile not found'}), 404
+
+    appointment = Appointment.query.filter_by(
+        id=appointment_id,
+        patient_id=patient.id
+    ).first()
+
+    if not appointment:
+        return jsonify({'success': False, 'message': 'Appointment not found'}), 404
+
+    return jsonify({
+        'success': True,
+        'appointment': appointment.to_dict(include_doctor=True, include_treatment=True)
+    }), 200
+
+
+@patient_bp.route('/appointments/<int:appointment_id>/cancel', methods=['POST'])
+@patient_required
+def cancel_appointment(appointment_id):
+    """Cancel an appointment."""
+    patient = get_current_patient()
+    if not patient:
+        return jsonify({'success': False, 'message': 'Patient profile not found'}), 404
+
+    appointment = Appointment.query.filter_by(
+        id=appointment_id,
+        patient_id=patient.id
+    ).first()
+
+    if not appointment:
+        return jsonify({'success': False, 'message': 'Appointment not found'}), 404
+
+    if not appointment.can_cancel:
+        return jsonify({
+            'success': False,
+            'message': 'This appointment cannot be cancelled'
+        }), 400
+
+    data = request.get_json() or {}
+    reason = data.get('reason', 'Cancelled by patient')
+
+    try:
+        appointment.cancel(cancelled_by='patient', reason=reason)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Appointment cancelled successfully',
+            'appointment': appointment.to_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@patient_bp.route('/appointments/<int:appointment_id>/reschedule', methods=['POST'])
+@patient_required
+def reschedule_appointment(appointment_id):
+    """Reschedule an appointment."""
+    patient = get_current_patient()
+    if not patient:
+        return jsonify({'success': False, 'message': 'Patient profile not found'}), 404
+
+    appointment = Appointment.query.filter_by(
+        id=appointment_id,
+        patient_id=patient.id
+    ).first()
+
+    if not appointment:
+        return jsonify({'success': False, 'message': 'Appointment not found'}), 404
+
+    if not appointment.can_reschedule:
+        return jsonify({
+            'success': False,
+            'message': 'This appointment cannot be rescheduled'
+        }), 400
+
+    data = request.get_json()
+    new_date_str = data.get('appointment_date')
+    new_time_str = data.get('appointment_time')
+
+    if not new_date_str or not new_time_str:
+        return jsonify({
+            'success': False,
+            'message': 'New date and time are required'
+        }), 400
+
+    try:
+        new_date = datetime.strptime(new_date_str, '%Y-%m-%d').date()
+        new_time = datetime.strptime(new_time_str, '%H:%M').time()
+    except ValueError:
+        return jsonify({
+            'success': False,
+            'message': 'Invalid date or time format'
+        }), 400
+
+    if new_date < date.today():
+        return jsonify({'success': False, 'message': 'Cannot reschedule to a past date'}), 400
+
+    # Check doctor availability
+    avail = DoctorAvailability.get_for_doctor_and_date(appointment.doctor_id, new_date)
+    if not avail or not avail.is_available:
+        return jsonify({
+            'success': False,
+            'message': 'Doctor is not available on this date'
+        }), 400
+
+    if not avail.is_slot_available(new_time):
+        return jsonify({
+            'success': False,
+            'message': 'Selected time is outside available hours'
+        }), 400
+
+    # Check for conflicts
+    if not Appointment.check_slot_available(appointment.doctor_id, new_date, new_time):
+        return jsonify({
+            'success': False,
+            'message': 'This time slot is already booked'
+        }), 409
+
+    try:
+        appointment.reschedule(new_date, new_time)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Appointment rescheduled successfully',
+            'appointment': appointment.to_dict(include_doctor=True)
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# =============================================================================
+# Appointment History & Treatment View
+# =============================================================================
+
+@patient_bp.route('/history', methods=['GET'])
+@patient_required
+def get_appointment_history():
+    """Get complete appointment and treatment history."""
+    patient = get_current_patient()
+    if not patient:
+        return jsonify({'success': False, 'message': 'Patient profile not found'}), 404
+
+    # Get all past/completed appointments with treatments
+    appointments = Appointment.query.filter(
+        Appointment.patient_id == patient.id,
+        (Appointment.appointment_date < date.today()) |
+        (Appointment.status.in_(['completed', 'cancelled', 'no_show']))
+    ).order_by(Appointment.appointment_date.desc()).all()
+
+    return jsonify({
+        'success': True,
+        'history': [apt.to_dict(include_doctor=True, include_treatment=True) for apt in appointments]
+    }), 200
+
+
+@patient_bp.route('/treatments', methods=['GET'])
+@patient_required
+def get_treatments():
+    """Get all treatments for the patient."""
+    patient = get_current_patient()
+    if not patient:
+        return jsonify({'success': False, 'message': 'Patient profile not found'}), 404
+
+    treatments = Treatment.query.join(Appointment).filter(
+        Appointment.patient_id == patient.id
+    ).order_by(Appointment.appointment_date.desc()).all()
+
+    result = []
+    for treatment in treatments:
+        data = treatment.to_dict()
+        data['appointment'] = treatment.appointment.to_dict(include_doctor=True)
+        result.append(data)
+
+    return jsonify({
+        'success': True,
+        'treatments': result
+    }), 200
+
+
+@patient_bp.route('/treatments/<int:treatment_id>', methods=['GET'])
+@patient_required
+def get_treatment_details(treatment_id):
+    """Get specific treatment details."""
+    patient = get_current_patient()
+    if not patient:
+        return jsonify({'success': False, 'message': 'Patient profile not found'}), 404
+
+    treatment = Treatment.query.join(Appointment).filter(
+        Treatment.id == treatment_id,
+        Appointment.patient_id == patient.id
+    ).first()
+
+    if not treatment:
+        return jsonify({'success': False, 'message': 'Treatment not found'}), 404
+
+    result = treatment.to_dict()
+    result['appointment'] = treatment.appointment.to_dict(include_doctor=True)
+
+    return jsonify({
+        'success': True,
+        'treatment': result
+    }), 200
