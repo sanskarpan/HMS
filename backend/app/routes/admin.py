@@ -5,7 +5,7 @@ Handles admin dashboard, doctor management, patient management, and appointment 
 from flask import Blueprint, request, jsonify
 from datetime import datetime, date
 
-from backend.app.models import db, User, Doctor, Patient, Appointment, Department
+from backend.app.models import db, User, Doctor, Patient, Appointment, Department, Treatment, AppointmentStatusLog
 from backend.app.utils.decorators import admin_required, get_current_user_from_request
 
 
@@ -501,6 +501,79 @@ def blacklist_patient(patient_id):
         }), 500
 
 
+@admin_bp.route('/patients/<int:patient_id>/appointments', methods=['GET'])
+@admin_required
+def get_patient_appointments(patient_id):
+    """Get complete appointment history for a patient."""
+    patient = Patient.query.get(patient_id)
+
+    if not patient:
+        return jsonify({
+            'success': False,
+            'message': 'Patient not found'
+        }), 404
+
+    # Get all appointments with filters
+    status = request.args.get('status')
+    query = Appointment.query.filter_by(patient_id=patient_id)
+
+    if status:
+        query = query.filter_by(status=status)
+
+    appointments = query.order_by(
+        Appointment.appointment_date.desc(),
+        Appointment.appointment_time
+    ).all()
+
+    return jsonify({
+        'success': True,
+        'appointments': [
+            apt.to_dict(include_doctor=True, include_treatment=True)
+            for apt in appointments
+        ],
+        'total': len(appointments)
+    }), 200
+
+
+@admin_bp.route('/patients/<int:patient_id>/treatments', methods=['GET'])
+@admin_required
+def get_patient_treatments(patient_id):
+    """Get all treatment records for a patient."""
+    patient = Patient.query.get(patient_id)
+
+    if not patient:
+        return jsonify({
+            'success': False,
+            'message': 'Patient not found'
+        }), 404
+
+    treatments = Treatment.get_patient_history(patient_id)
+
+    return jsonify({
+        'success': True,
+        'treatments': [t.to_dict(include_appointment=True) for t in treatments],
+        'total': len(treatments)
+    }), 200
+
+
+@admin_bp.route('/treatments/<int:treatment_id>', methods=['GET'])
+@admin_required
+def get_treatment(treatment_id):
+    """Get a specific treatment record."""
+    treatment = Treatment.query.get(treatment_id)
+
+    if not treatment:
+        return jsonify({
+            'success': False,
+            'message': 'Treatment not found'
+        }), 404
+
+    return jsonify({
+        'success': True,
+        'treatment': treatment.to_dict(include_appointment=True)
+    }), 200
+
+
 # ============================================================================
 # Appointment Management
 # ============================================================================
@@ -616,6 +689,15 @@ def cancel_appointment(appointment_id):
     reason = data.get('reason', 'Cancelled by admin')
 
     try:
+        # Log status change
+        AppointmentStatusLog.log_status_change(
+            appointment=appointment,
+            new_status='cancelled',
+            changed_by_role='admin',
+            changed_by_id=None,
+            reason=reason
+        )
+
         appointment.cancel(cancelled_by='admin', reason=reason)
         db.session.commit()
 
@@ -630,6 +712,26 @@ def cancel_appointment(appointment_id):
             'success': False,
             'message': f'Error: {str(e)}'
         }), 500
+
+
+@admin_bp.route('/appointments/<int:appointment_id>/status-history', methods=['GET'])
+@admin_required
+def get_appointment_status_history(appointment_id):
+    """Get the status change history for an appointment."""
+    appointment = Appointment.query.get(appointment_id)
+
+    if not appointment:
+        return jsonify({
+            'success': False,
+            'message': 'Appointment not found'
+        }), 404
+
+    logs = AppointmentStatusLog.get_appointment_history(appointment_id)
+
+    return jsonify({
+        'success': True,
+        'status_history': [log.to_dict() for log in logs]
+    }), 200
 
 
 # ============================================================================
