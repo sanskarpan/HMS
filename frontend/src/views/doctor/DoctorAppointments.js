@@ -1,8 +1,3 @@
-/**
- * Doctor Appointments View Component
- * Displays and manages doctor's appointments.
- */
-
 const DoctorAppointments = {
     name: 'DoctorAppointments',
 

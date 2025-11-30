@@ -1,28 +1,12 @@
-/**
- * Admin Service for Hospital Management System.
- * Provides methods for admin-specific API operations.
- * Reuses the base api object for DRY implementation.
- */
+// Admin service - handles admin API calls
 
 const adminService = {
-    // ========================================================================
     // Dashboard
-    // ========================================================================
-
-    /**
-     * Get dashboard statistics.
-     */
     async getDashboardStats() {
         return await api.get('/admin/dashboard/stats');
     },
 
-    // ========================================================================
-    // Doctor Management
-    // ========================================================================
-
-    /**
-     * Get all doctors with optional filters.
-     */
+    // Doctors
     async getDoctors(params = {}) {
         const queryParams = new URLSearchParams();
         if (params.search) queryParams.append('search', params.search);
@@ -33,48 +17,27 @@ const adminService = {
         return await api.get(`/admin/doctors${query ? '?' + query : ''}`);
     },
 
-    /**
-     * Get a specific doctor by ID.
-     */
     async getDoctor(doctorId) {
         return await api.get(`/admin/doctors/${doctorId}`);
     },
 
-    /**
-     * Create a new doctor.
-     */
     async createDoctor(doctorData) {
         return await api.post('/admin/doctors', doctorData);
     },
 
-    /**
-     * Update a doctor.
-     */
     async updateDoctor(doctorId, doctorData) {
         return await api.put(`/admin/doctors/${doctorId}`, doctorData);
     },
 
-    /**
-     * Blacklist or unblacklist a doctor.
-     */
     async toggleDoctorBlacklist(doctorId, blacklist = true) {
         return await api.post(`/admin/doctors/${doctorId}/blacklist`, { blacklist });
     },
 
-    /**
-     * Delete (deactivate) a doctor.
-     */
     async deleteDoctor(doctorId) {
         return await api.delete(`/admin/doctors/${doctorId}`);
     },
 
-    // ========================================================================
-    // Patient Management
-    // ========================================================================
-
-    /**
-     * Get all patients with optional filters.
-     */
+    // Patients
     async getPatients(params = {}) {
         const queryParams = new URLSearchParams();
         if (params.search) queryParams.append('search', params.search);
@@ -84,30 +47,18 @@ const adminService = {
         return await api.get(`/admin/patients${query ? '?' + query : ''}`);
     },
 
-    /**
-     * Get a specific patient by ID.
-     */
     async getPatient(patientId) {
         return await api.get(`/admin/patients/${patientId}`);
     },
 
-    /**
-     * Update a patient.
-     */
     async updatePatient(patientId, patientData) {
         return await api.put(`/admin/patients/${patientId}`, patientData);
     },
 
-    /**
-     * Blacklist or unblacklist a patient.
-     */
     async togglePatientBlacklist(patientId, blacklist = true) {
         return await api.post(`/admin/patients/${patientId}/blacklist`, { blacklist });
     },
 
-    /**
-     * Get patient's appointment history.
-     */
     async getPatientAppointments(patientId, params = {}) {
         const queryParams = new URLSearchParams();
         if (params.status) queryParams.append('status', params.status);
@@ -115,27 +66,15 @@ const adminService = {
         return await api.get(`/admin/patients/${patientId}/appointments${query ? '?' + query : ''}`);
     },
 
-    /**
-     * Get patient's treatment records.
-     */
     async getPatientTreatments(patientId) {
         return await api.get(`/admin/patients/${patientId}/treatments`);
     },
 
-    /**
-     * Get a specific treatment record.
-     */
     async getTreatment(treatmentId) {
         return await api.get(`/admin/treatments/${treatmentId}`);
     },
 
-    // ========================================================================
-    // Appointment Management
-    // ========================================================================
-
-    /**
-     * Get all appointments with optional filters.
-     */
+    // Appointments
     async getAppointments(params = {}) {
         const queryParams = new URLSearchParams();
         if (params.status) queryParams.append('status', params.status);
@@ -150,52 +89,30 @@ const adminService = {
         return await api.get(`/admin/appointments${query ? '?' + query : ''}`);
     },
 
-    /**
-     * Get a specific appointment by ID.
-     */
     async getAppointment(appointmentId) {
         return await api.get(`/admin/appointments/${appointmentId}`);
     },
 
-    /**
-     * Cancel an appointment.
-     */
     async cancelAppointment(appointmentId, reason = '') {
         return await api.post(`/admin/appointments/${appointmentId}/cancel`, { reason });
     },
 
-    /**
-     * Get appointment status change history.
-     */
     async getAppointmentStatusHistory(appointmentId) {
         return await api.get(`/admin/appointments/${appointmentId}/status-history`);
     },
 
-    // ========================================================================
-    // Department Management
-    // ========================================================================
-
-    /**
-     * Get all departments.
-     */
+    // Departments
     async getDepartments() {
         return await api.get('/admin/departments');
     },
 
-    /**
-     * Create a new department.
-     */
     async createDepartment(departmentData) {
         return await api.post('/admin/departments', departmentData);
     },
 
-    /**
-     * Update a department.
-     */
     async updateDepartment(departmentId, departmentData) {
         return await api.put(`/admin/departments/${departmentId}`, departmentData);
     }
 };
 
-// Make service available globally
 window.adminService = adminService;

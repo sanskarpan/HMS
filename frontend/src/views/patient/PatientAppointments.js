@@ -1,8 +1,3 @@
-/**
- * Patient Appointments View Component 
- * Shows all appointments with filtering and management options.
- */
-
 const PatientAppointments = {
     name: 'PatientAppointments',
 

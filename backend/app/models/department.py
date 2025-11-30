@@ -1,29 +1,12 @@
-"""
-Department/Specialization model for the Hospital Management System.
-Represents medical specializations like Cardiology, Oncology, etc.
-"""
 from . import db, TimestampMixin
 
 
 class Department(db.Model, TimestampMixin):
-    """
-    Department model representing medical specializations.
-
-    Attributes:
-        name: Department name (e.g., Cardiology, Oncology)
-        description: Detailed description of the department
-        is_active: Whether the department is currently active
-    """
     __tablename__ = 'departments'
 
-    # Primary key
     id = db.Column(db.Integer, primary_key=True)
-
-    # Department info
     name = db.Column(db.String(100), unique=True, nullable=False, index=True)
     description = db.Column(db.Text, nullable=True)
-
-    # Status
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
     # Relationships

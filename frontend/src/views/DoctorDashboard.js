@@ -1,8 +1,3 @@
-/**
- * Doctor Dashboard View Component
- * Displays doctor-specific statistics and today's appointments.
- */
-
 const DoctorDashboard = {
     name: 'DoctorDashboard',
 

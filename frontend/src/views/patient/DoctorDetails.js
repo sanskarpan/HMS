@@ -1,8 +1,3 @@
-/**
- * Doctor Details View Component
- * Shows doctor profile with 7-day availability and booking.
- */
-
 const DoctorDetails = {
     name: 'DoctorDetails',
 

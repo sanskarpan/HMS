@@ -1,8 +1,3 @@
-/**
- * Department List View Component 
- * Displays all departments for doctor search and booking.
- */
-
 const DepartmentList = {
     name: 'DepartmentList',
 

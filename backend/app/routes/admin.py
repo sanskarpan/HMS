@@ -1,6 +1,5 @@
 """
-Admin API Routes for the Hospital Management System.
-Handles admin dashboard, doctor management, patient management, and appointment oversight.
+Admin routes - dashboard stats, doctor/patient/appointment management
 """
 from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime, date
@@ -13,47 +12,31 @@ from backend.app.services.cache_service import cache, CacheService
 admin_bp = Blueprint('admin', __name__)
 
 
-# ============================================================================
-# Dashboard Stats
-# ============================================================================
-
 @admin_bp.route('/dashboard/stats', methods=['GET'])
 @admin_required
 def get_dashboard_stats():
-    """
-    Get admin dashboard statistics. Cached for 2 minutes.
-
-    Returns:
-        Total counts for doctors, patients, and appointments,
-        along with recent activity stats.
-    """
-    # Check cache first
+    """Fetch overall system stats for admin dashboard (cached 2min)."""
     cache_key = 'dash:admin:stats'
     cached_result = cache.get(cache_key)
     if cached_result:
         return cached_result
 
-    # Total counts
     total_doctors = Doctor.query.filter_by(is_active=True).count()
     total_patients = Patient.query.filter_by(is_active=True).count()
     total_appointments = Appointment.query.count()
 
-    # Today's appointments
     today_appointments = Appointment.query.filter_by(
         appointment_date=date.today()
     ).count()
 
-    # Appointments by status
     booked_count = Appointment.query.filter_by(status='booked').count()
     completed_count = Appointment.query.filter_by(status='completed').count()
     cancelled_count = Appointment.query.filter_by(status='cancelled').count()
 
-    # Recent registrations (last 7 days)
     from datetime import timedelta
     week_ago = datetime.utcnow() - timedelta(days=7)
     new_patients = Patient.query.filter(Patient.created_at >= week_ago).count()
 
-    # Departments with doctor counts
     departments = Department.get_all_active()
     dept_stats = [
         {
@@ -85,21 +68,10 @@ def get_dashboard_stats():
     return response
 
 
-# ============================================================================
-# Doctor Management (CRUD)
-# ============================================================================
-
 @admin_bp.route('/doctors', methods=['GET'])
 @admin_required
 def get_all_doctors():
-    """
-    Get all doctors with optional filtering.
-
-    Query params:
-        search: Search by name or qualification
-        department_id: Filter by department
-        include_inactive: Include inactive doctors (default: false)
-    """
+    """List doctors with optional search/filter."""
     search = request.args.get('search', '')
     department_id = request.args.get('department_id', type=int)
     include_inactive = request.args.get('include_inactive', 'false').lower() == 'true'
@@ -131,14 +103,11 @@ def get_all_doctors():
 @admin_bp.route('/doctors/<int:doctor_id>', methods=['GET'])
 @admin_required
 def get_doctor(doctor_id):
-    """Get a specific doctor's details."""
+    """Fetch single doctor by ID."""
     doctor = Doctor.query.get(doctor_id)
 
     if not doctor:
-        return jsonify({
-            'success': False,
-            'message': 'Doctor not found'
-        }), 404
+        return jsonify({'success': False, 'message': 'Doctor not found'}), 404
 
     return jsonify({
         'success': True,
@@ -149,49 +118,25 @@ def get_doctor(doctor_id):
 @admin_bp.route('/doctors', methods=['POST'])
 @admin_required
 def create_doctor():
-    """
-    Create a new doctor profile with user account.
-
-    Required fields:
-        username, email, password, full_name, department_id
-
-    Optional fields:
-        qualification, experience_years, phone, bio, consultation_fee
-    """
+    """Add new doctor with login credentials."""
     data = request.get_json()
 
-    # Validate required fields
     required_fields = ['username', 'email', 'password', 'full_name', 'department_id']
     for field in required_fields:
         if not data.get(field):
-            return jsonify({
-                'success': False,
-                'message': f'{field} is required'
-            }), 400
+            return jsonify({'success': False, 'message': f'{field} is required'}), 400
 
-    # Check if username or email already exists
     if User.find_by_username(data['username']):
-        return jsonify({
-            'success': False,
-            'message': 'Username already exists'
-        }), 409
+        return jsonify({'success': False, 'message': 'Username already exists'}), 409
 
     if User.find_by_email(data['email']):
-        return jsonify({
-            'success': False,
-            'message': 'Email already exists'
-        }), 409
+        return jsonify({'success': False, 'message': 'Email already exists'}), 409
 
-    # Validate department exists
     department = Department.query.get(data['department_id'])
     if not department:
-        return jsonify({
-            'success': False,
-            'message': 'Department not found'
-        }), 404
+        return jsonify({'success': False, 'message': 'Department not found'}), 404
 
     try:
-        # Create user account
         user = User(
             username=data['username'],
             email=data['email'],
@@ -199,9 +144,8 @@ def create_doctor():
             role='doctor'
         )
         db.session.add(user)
-        db.session.flush()  # Get user ID
+        db.session.flush()
 
-        # Create doctor profile
         doctor = Doctor(
             user_id=user.id,
             department_id=data['department_id'],
@@ -223,43 +167,26 @@ def create_doctor():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({
-            'success': False,
-            'message': f'Error creating doctor: {str(e)}'
-        }), 500
+        return jsonify({'success': False, 'message': f'Failed to create doctor: {str(e)}'}), 500
 
 
 @admin_bp.route('/doctors/<int:doctor_id>', methods=['PUT'])
 @admin_required
 def update_doctor(doctor_id):
-    """
-    Update doctor profile.
-
-    Updatable fields:
-        full_name, department_id, qualification, experience_years,
-        phone, bio, consultation_fee, is_active
-    """
+    """Modify doctor details."""
     doctor = Doctor.query.get(doctor_id)
 
     if not doctor:
-        return jsonify({
-            'success': False,
-            'message': 'Doctor not found'
-        }), 404
+        return jsonify({'success': False, 'message': 'Doctor not found'}), 404
 
     data = request.get_json()
 
-    # Validate department if being updated
     if 'department_id' in data:
         department = Department.query.get(data['department_id'])
         if not department:
-            return jsonify({
-                'success': False,
-                'message': 'Department not found'
-            }), 404
+            return jsonify({'success': False, 'message': 'Department not found'}), 404
         doctor.department_id = data['department_id']
 
-    # Update allowed fields
     updatable_fields = [
         'full_name', 'qualification', 'experience_years',
         'phone', 'bio', 'consultation_fee', 'is_active'
@@ -273,29 +200,23 @@ def update_doctor(doctor_id):
         db.session.commit()
         return jsonify({
             'success': True,
-            'message': 'Doctor updated successfully',
+            'message': 'Doctor updated',
             'doctor': doctor.to_dict(include_user=True)
         }), 200
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({
-            'success': False,
-            'message': f'Error updating doctor: {str(e)}'
-        }), 500
+        return jsonify({'success': False, 'message': f'Update failed: {str(e)}'}), 500
 
 
 @admin_bp.route('/doctors/<int:doctor_id>/blacklist', methods=['POST'])
 @admin_required
 def blacklist_doctor(doctor_id):
-    """Blacklist a doctor (disable login)."""
+    """Block or unblock doctor login."""
     doctor = Doctor.query.get(doctor_id)
 
     if not doctor:
-        return jsonify({
-            'success': False,
-            'message': 'Doctor not found'
-        }), 404
+        return jsonify({'success': False, 'message': 'Doctor not found'}), 404
 
     data = request.get_json() or {}
     blacklist = data.get('blacklist', True)
@@ -306,35 +227,22 @@ def blacklist_doctor(doctor_id):
     try:
         db.session.commit()
         action = 'blacklisted' if blacklist else 'unblacklisted'
-        return jsonify({
-            'success': True,
-            'message': f'Doctor {action} successfully'
-        }), 200
+        return jsonify({'success': True, 'message': f'Doctor {action}'}), 200
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }), 500
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @admin_bp.route('/doctors/<int:doctor_id>', methods=['DELETE'])
 @admin_required
 def delete_doctor(doctor_id):
-    """
-    Delete a doctor (soft delete - deactivates account).
-    Use blacklist for temporary suspension.
-    """
+    """Deactivate doctor account (soft delete)."""
     doctor = Doctor.query.get(doctor_id)
 
     if not doctor:
-        return jsonify({
-            'success': False,
-            'message': 'Doctor not found'
-        }), 404
+        return jsonify({'success': False, 'message': 'Doctor not found'}), 404
 
-    # Check for upcoming appointments
     upcoming = doctor.appointments.filter(
         Appointment.appointment_date >= date.today(),
         Appointment.status == 'booked'
@@ -343,7 +251,7 @@ def delete_doctor(doctor_id):
     if upcoming > 0:
         return jsonify({
             'success': False,
-            'message': f'Cannot delete doctor with {upcoming} upcoming appointments. Cancel or reassign them first.'
+            'message': f'Cannot delete - {upcoming} upcoming appointments exist'
         }), 400
 
     try:
@@ -351,33 +259,17 @@ def delete_doctor(doctor_id):
         doctor.user.is_active = False
         db.session.commit()
 
-        return jsonify({
-            'success': True,
-            'message': 'Doctor deactivated successfully'
-        }), 200
+        return jsonify({'success': True, 'message': 'Doctor deactivated'}), 200
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }), 500
+        return jsonify({'success': False, 'message': str(e)}), 500
 
-
-# ============================================================================
-# Patient Management
-# ============================================================================
 
 @admin_bp.route('/patients', methods=['GET'])
 @admin_required
 def get_all_patients():
-    """
-    Get all patients with optional filtering.
-
-    Query params:
-        search: Search by name, phone, or email
-        include_inactive: Include inactive patients (default: false)
-    """
+    """List all patients with optional search."""
     search = request.args.get('search', '')
     include_inactive = request.args.get('include_inactive', 'false').lower() == 'true'
 
@@ -406,16 +298,12 @@ def get_all_patients():
 @admin_bp.route('/patients/<int:patient_id>', methods=['GET'])
 @admin_required
 def get_patient(patient_id):
-    """Get a specific patient's details with appointment history."""
+    """Get patient details with appointment stats."""
     patient = Patient.query.get(patient_id)
 
     if not patient:
-        return jsonify({
-            'success': False,
-            'message': 'Patient not found'
-        }), 404
+        return jsonify({'success': False, 'message': 'Patient not found'}), 404
 
-    # Get appointment counts
     total_appointments = patient.appointments.count()
     completed_appointments = patient.appointments.filter_by(status='completed').count()
 
@@ -426,27 +314,20 @@ def get_patient(patient_id):
         'upcoming': len(patient.upcoming_appointments)
     }
 
-    return jsonify({
-        'success': True,
-        'patient': patient_data
-    }), 200
+    return jsonify({'success': True, 'patient': patient_data}), 200
 
 
 @admin_bp.route('/patients/<int:patient_id>', methods=['PUT'])
 @admin_required
 def update_patient(patient_id):
-    """Update patient profile (admin can update any field)."""
+    """Modify patient profile."""
     patient = Patient.query.get(patient_id)
 
     if not patient:
-        return jsonify({
-            'success': False,
-            'message': 'Patient not found'
-        }), 404
+        return jsonify({'success': False, 'message': 'Patient not found'}), 404
 
     data = request.get_json()
 
-    # Update allowed fields
     updatable_fields = [
         'full_name', 'date_of_birth', 'gender', 'phone',
         'address', 'emergency_contact', 'blood_group',
@@ -456,7 +337,6 @@ def update_patient(patient_id):
     for field in updatable_fields:
         if field in data:
             value = data[field]
-            # Handle date conversion
             if field == 'date_of_birth' and value:
                 value = datetime.strptime(value, '%Y-%m-%d').date()
             setattr(patient, field, value)
@@ -465,29 +345,23 @@ def update_patient(patient_id):
         db.session.commit()
         return jsonify({
             'success': True,
-            'message': 'Patient updated successfully',
+            'message': 'Patient updated',
             'patient': patient.to_dict()
         }), 200
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({
-            'success': False,
-            'message': f'Error updating patient: {str(e)}'
-        }), 500
+        return jsonify({'success': False, 'message': f'Update failed: {str(e)}'}), 500
 
 
 @admin_bp.route('/patients/<int:patient_id>/blacklist', methods=['POST'])
 @admin_required
 def blacklist_patient(patient_id):
-    """Blacklist a patient (disable login)."""
+    """Block/unblock patient login."""
     patient = Patient.query.get(patient_id)
 
     if not patient:
-        return jsonify({
-            'success': False,
-            'message': 'Patient not found'
-        }), 404
+        return jsonify({'success': False, 'message': 'Patient not found'}), 404
 
     data = request.get_json() or {}
     blacklist = data.get('blacklist', True)
@@ -498,32 +372,22 @@ def blacklist_patient(patient_id):
     try:
         db.session.commit()
         action = 'blacklisted' if blacklist else 'unblacklisted'
-        return jsonify({
-            'success': True,
-            'message': f'Patient {action} successfully'
-        }), 200
+        return jsonify({'success': True, 'message': f'Patient {action}'}), 200
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }), 500
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @admin_bp.route('/patients/<int:patient_id>/appointments', methods=['GET'])
 @admin_required
 def get_patient_appointments(patient_id):
-    """Get complete appointment history for a patient."""
+    """Fetch patient's appointment history."""
     patient = Patient.query.get(patient_id)
 
     if not patient:
-        return jsonify({
-            'success': False,
-            'message': 'Patient not found'
-        }), 404
+        return jsonify({'success': False, 'message': 'Patient not found'}), 404
 
-    # Get all appointments with filters
     status = request.args.get('status')
     query = Appointment.query.filter_by(patient_id=patient_id)
 
@@ -548,14 +412,11 @@ def get_patient_appointments(patient_id):
 @admin_bp.route('/patients/<int:patient_id>/treatments', methods=['GET'])
 @admin_required
 def get_patient_treatments(patient_id):
-    """Get all treatment records for a patient."""
+    """List treatments for a patient."""
     patient = Patient.query.get(patient_id)
 
     if not patient:
-        return jsonify({
-            'success': False,
-            'message': 'Patient not found'
-        }), 404
+        return jsonify({'success': False, 'message': 'Patient not found'}), 404
 
     treatments = Treatment.get_patient_history(patient_id)
 
@@ -569,14 +430,11 @@ def get_patient_treatments(patient_id):
 @admin_bp.route('/treatments/<int:treatment_id>', methods=['GET'])
 @admin_required
 def get_treatment(treatment_id):
-    """Get a specific treatment record."""
+    """View specific treatment record."""
     treatment = Treatment.query.get(treatment_id)
 
     if not treatment:
-        return jsonify({
-            'success': False,
-            'message': 'Treatment not found'
-        }), 404
+        return jsonify({'success': False, 'message': 'Treatment not found'}), 404
 
     return jsonify({
         'success': True,
@@ -584,25 +442,10 @@ def get_treatment(treatment_id):
     }), 200
 
 
-# ============================================================================
-# Appointment Management
-# ============================================================================
-
 @admin_bp.route('/appointments', methods=['GET'])
 @admin_required
 def get_all_appointments():
-    """
-    Get all appointments with filtering options.
-
-    Query params:
-        status: Filter by status (booked, completed, cancelled)
-        date: Filter by specific date (YYYY-MM-DD)
-        date_from: Filter from date
-        date_to: Filter to date
-        doctor_id: Filter by doctor
-        patient_id: Filter by patient
-        upcoming: If 'true', show only upcoming appointments
-    """
+    """List appointments with filters."""
     status = request.args.get('status')
     date_filter = request.args.get('date')
     date_from = request.args.get('date_from')
@@ -658,14 +501,11 @@ def get_all_appointments():
 @admin_bp.route('/appointments/<int:appointment_id>', methods=['GET'])
 @admin_required
 def get_appointment(appointment_id):
-    """Get a specific appointment's details."""
+    """View appointment details."""
     appointment = Appointment.query.get(appointment_id)
 
     if not appointment:
-        return jsonify({
-            'success': False,
-            'message': 'Appointment not found'
-        }), 404
+        return jsonify({'success': False, 'message': 'Appointment not found'}), 404
 
     return jsonify({
         'success': True,
@@ -680,26 +520,22 @@ def get_appointment(appointment_id):
 @admin_bp.route('/appointments/<int:appointment_id>/cancel', methods=['POST'])
 @admin_required
 def cancel_appointment(appointment_id):
-    """Cancel an appointment (admin action)."""
+    """Cancel appointment as admin."""
     appointment = Appointment.query.get(appointment_id)
 
     if not appointment:
-        return jsonify({
-            'success': False,
-            'message': 'Appointment not found'
-        }), 404
+        return jsonify({'success': False, 'message': 'Appointment not found'}), 404
 
     if appointment.status != 'booked':
         return jsonify({
             'success': False,
-            'message': f'Cannot cancel appointment with status: {appointment.status}'
+            'message': f'Cannot cancel - status is {appointment.status}'
         }), 400
 
     data = request.get_json() or {}
     reason = data.get('reason', 'Cancelled by admin')
 
     try:
-        # Log status change
         AppointmentStatusLog.log_status_change(
             appointment=appointment,
             new_status='cancelled',
@@ -711,30 +547,21 @@ def cancel_appointment(appointment_id):
         appointment.cancel(cancelled_by='admin', reason=reason)
         db.session.commit()
 
-        return jsonify({
-            'success': True,
-            'message': 'Appointment cancelled successfully'
-        }), 200
+        return jsonify({'success': True, 'message': 'Appointment cancelled'}), 200
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }), 500
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @admin_bp.route('/appointments/<int:appointment_id>/status-history', methods=['GET'])
 @admin_required
 def get_appointment_status_history(appointment_id):
-    """Get the status change history for an appointment."""
+    """View status change history for appointment."""
     appointment = Appointment.query.get(appointment_id)
 
     if not appointment:
-        return jsonify({
-            'success': False,
-            'message': 'Appointment not found'
-        }), 404
+        return jsonify({'success': False, 'message': 'Appointment not found'}), 404
 
     logs = AppointmentStatusLog.get_appointment_history(appointment_id)
 
@@ -744,14 +571,10 @@ def get_appointment_status_history(appointment_id):
     }), 200
 
 
-# ============================================================================
-# Department Management
-# ============================================================================
-
 @admin_bp.route('/departments', methods=['GET'])
 @admin_required
 def get_departments():
-    """Get all departments with doctor counts. Cached for 30 minutes."""
+    """List departments (cached 30min)."""
     cache_key = 'admin:dept:list'
     cached_result = cache.get(cache_key)
     if cached_result:
@@ -771,21 +594,14 @@ def get_departments():
 @admin_bp.route('/departments', methods=['POST'])
 @admin_required
 def create_department():
-    """Create a new department."""
+    """Add new department."""
     data = request.get_json()
 
     if not data.get('name'):
-        return jsonify({
-            'success': False,
-            'message': 'Department name is required'
-        }), 400
+        return jsonify({'success': False, 'message': 'Name required'}), 400
 
-    # Check if department already exists
     if Department.find_by_name(data['name']):
-        return jsonify({
-            'success': False,
-            'message': 'Department already exists'
-        }), 409
+        return jsonify({'success': False, 'message': 'Department already exists'}), 409
 
     try:
         department = Department(
@@ -795,47 +611,36 @@ def create_department():
         db.session.add(department)
         db.session.commit()
 
-        # Invalidate department caches
         CacheService.invalidate_department_cache()
         cache.delete('admin:dept:list')
         cache.delete('dept:list:all')
 
         return jsonify({
             'success': True,
-            'message': 'Department created successfully',
+            'message': 'Department created',
             'department': department.to_dict()
         }), 201
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }), 500
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @admin_bp.route('/departments/<int:dept_id>', methods=['PUT'])
 @admin_required
 def update_department(dept_id):
-    """Update a department."""
+    """Modify department."""
     department = Department.query.get(dept_id)
 
     if not department:
-        return jsonify({
-            'success': False,
-            'message': 'Department not found'
-        }), 404
+        return jsonify({'success': False, 'message': 'Department not found'}), 404
 
     data = request.get_json()
 
     if 'name' in data:
-        # Check for duplicate name
         existing = Department.find_by_name(data['name'])
         if existing and existing.id != dept_id:
-            return jsonify({
-                'success': False,
-                'message': 'Department name already exists'
-            }), 409
+            return jsonify({'success': False, 'message': 'Name already taken'}), 409
         department.name = data['name']
 
     if 'description' in data:
@@ -848,14 +653,10 @@ def update_department(dept_id):
         db.session.commit()
         return jsonify({
             'success': True,
-            'message': 'Department updated successfully',
+            'message': 'Department updated',
             'department': department.to_dict()
         }), 200
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }), 500
-
+        return jsonify({'success': False, 'message': str(e)}), 500

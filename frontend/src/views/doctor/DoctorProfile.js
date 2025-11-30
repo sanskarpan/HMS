@@ -1,8 +1,3 @@
-/**
- * Doctor Profile View Component
- * Allows doctors to view and update their profile.
- */
-
 const DoctorProfile = {
     name: 'DoctorProfile',
 

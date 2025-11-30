@@ -1,8 +1,3 @@
-/**
- * Patient Profile View Component
- * Allows patients to view and update their profile.
- */
-
 const PatientProfile = {
     name: 'PatientProfile',
 

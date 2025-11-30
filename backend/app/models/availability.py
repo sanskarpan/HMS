@@ -1,37 +1,12 @@
-"""
-Doctor Availability model for the Hospital Management System.
-Handles doctor scheduling and time slot management for the next 7 days.
-"""
 from datetime import datetime, date, time, timedelta
 from . import db, TimestampMixin
 
 
 class DoctorAvailability(db.Model, TimestampMixin):
-    """
-    Doctor Availability model for managing appointment slots.
-
-    Doctors can set their availability for morning and evening slots
-    for the next 7 days. Time slots are generated based on slot_duration.
-
-    Attributes:
-        doctor_id: Associated doctor
-        date: Date of availability
-        start_time_morning: Morning slot start (e.g., 08:00)
-        end_time_morning: Morning slot end (e.g., 12:00)
-        start_time_evening: Evening slot start (e.g., 16:00)
-        end_time_evening: Evening slot end (e.g., 21:00)
-        is_available: Whether doctor is available on this date
-        slot_duration: Duration per appointment slot in minutes
-    """
     __tablename__ = 'doctor_availability'
 
-    # Primary key
     id = db.Column(db.Integer, primary_key=True)
-
-    # Foreign key
     doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'), nullable=False)
-
-    # Date of availability
     date = db.Column(db.Date, nullable=False, index=True)
 
     # Morning slot times
