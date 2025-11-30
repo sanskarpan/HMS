@@ -2,11 +2,12 @@
 Admin API Routes for the Hospital Management System.
 Handles admin dashboard, doctor management, patient management, and appointment oversight.
 """
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime, date
 
 from backend.app.models import db, User, Doctor, Patient, Appointment, Department, Treatment, AppointmentStatusLog
-from backend.app.utils.decorators import admin_required, get_current_user_from_request
+from backend.app.utils.decorators import admin_required
+from backend.app.services.cache_service import cache, CacheService
 
 
 admin_bp = Blueprint('admin', __name__)
@@ -20,12 +21,18 @@ admin_bp = Blueprint('admin', __name__)
 @admin_required
 def get_dashboard_stats():
     """
-    Get admin dashboard statistics.
+    Get admin dashboard statistics. Cached for 2 minutes.
 
     Returns:
         Total counts for doctors, patients, and appointments,
         along with recent activity stats.
     """
+    # Check cache first
+    cache_key = 'dash:admin:stats'
+    cached_result = cache.get(cache_key)
+    if cached_result:
+        return cached_result
+
     # Total counts
     total_doctors = Doctor.query.filter_by(is_active=True).count()
     total_patients = Patient.query.filter_by(is_active=True).count()
@@ -57,7 +64,7 @@ def get_dashboard_stats():
         for dept in departments
     ]
 
-    return jsonify({
+    response = jsonify({
         'success': True,
         'stats': {
             'total_doctors': total_doctors,
@@ -73,6 +80,9 @@ def get_dashboard_stats():
             'departments': dept_stats
         }
     }), 200
+
+    cache.set(cache_key, response, timeout=current_app.config.get('CACHE_TTL_REALTIME', 120))
+    return response
 
 
 # ============================================================================
@@ -741,13 +751,21 @@ def get_appointment_status_history(appointment_id):
 @admin_bp.route('/departments', methods=['GET'])
 @admin_required
 def get_departments():
-    """Get all departments with doctor counts."""
+    """Get all departments with doctor counts. Cached for 30 minutes."""
+    cache_key = 'admin:dept:list'
+    cached_result = cache.get(cache_key)
+    if cached_result:
+        return cached_result
+
     departments = Department.get_all_active()
 
-    return jsonify({
+    response = jsonify({
         'success': True,
         'departments': [dept.to_dict() for dept in departments]
     }), 200
+
+    cache.set(cache_key, response, timeout=current_app.config.get('CACHE_TTL_STATIC', 1800))
+    return response
 
 
 @admin_bp.route('/departments', methods=['POST'])
@@ -776,6 +794,11 @@ def create_department():
         )
         db.session.add(department)
         db.session.commit()
+
+        # Invalidate department caches
+        CacheService.invalidate_department_cache()
+        cache.delete('admin:dept:list')
+        cache.delete('dept:list:all')
 
         return jsonify({
             'success': True,
