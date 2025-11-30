@@ -77,7 +77,17 @@ const doctorService = {
 
     async updateProfile(profileData) {
         return await api.put('/doctor/profile', profileData);
+    },
+
+    // Charts
+    async getChartData(chartType, params = {}) {
+        const queryParams = new URLSearchParams();
+        if (params.weeks) queryParams.append('weeks', params.weeks);
+        if (params.months) queryParams.append('months', params.months);
+        const query = queryParams.toString();
+        return await api.get(`/doctor/charts/${chartType}${query ? '?' + query : ''}`);
     }
 };
 
 window.doctorService = doctorService;
+window.DoctorService = doctorService;
