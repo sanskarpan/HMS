@@ -1,32 +1,15 @@
-"""
-Status Log model for tracking appointment status changes.
-Provides audit trail for all status transitions.
-"""
 from datetime import datetime
 from . import db
 
 
 class AppointmentStatusLog(db.Model):
-    """
-    Tracks all status changes for appointments.
-
-    Provides complete audit trail of:
-    - Who changed the status
-    - When it was changed
-    - What the old and new status were
-    - Optional notes/reason for the change
-    """
     __tablename__ = 'appointment_status_logs'
 
     id = db.Column(db.Integer, primary_key=True)
     appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id'), nullable=False)
-
-    # Status change details
     old_status = db.Column(db.String(20), nullable=True)
     new_status = db.Column(db.String(20), nullable=False)
-
-    # Who made the change
-    changed_by_role = db.Column(db.String(20), nullable=False)  # patient, doctor, admin, system
+    changed_by_role = db.Column(db.String(20), nullable=False)
     changed_by_id = db.Column(db.Integer, nullable=True)
 
     # When and why

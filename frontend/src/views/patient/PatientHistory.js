@@ -1,8 +1,3 @@
-/**
- * Patient History View Component 
- * Shows complete appointment and treatment history.
- */
-
 const PatientHistory = {
     name: 'PatientHistory',
 

@@ -34,10 +34,6 @@ class NotificationService:
             autoescape=select_autoescape(['html', 'xml'])
         )
 
-    # ========================================================================
-    # Email Methods
-    # ========================================================================
-
     def send_email(self, to, subject, body, html=None, attachments=None):
         """
         Send an email using configured SMTP server.
@@ -110,10 +106,6 @@ class NotificationService:
         logger.info(f"[SIMULATED] Body preview: {body[:100]}...")
         return {'success': True, 'message': 'Email simulated (no credentials configured)', 'simulated': True}
 
-    # ========================================================================
-    # Webhook Methods
-    # ========================================================================
-
     def send_gchat_webhook(self, webhook_url, message):
         """
         Send a message to Google Chat via webhook.
@@ -150,10 +142,6 @@ class NotificationService:
         except Exception as e:
             logger.error(f"Unexpected webhook error: {e}")
             return {'success': False, 'message': f'Error: {str(e)}'}
-
-    # ========================================================================
-    # Template-Based Notifications
-    # ========================================================================
 
     def send_appointment_reminder(self, patient_email, patient_name, doctor_name,
                                    appointment_date, appointment_time, hospital_info=None):
@@ -370,10 +358,6 @@ Hospital Management System
 """
 
         return self.send_email(patient_email, subject, body)
-
-    # ========================================================================
-    # Notification Logging
-    # ========================================================================
 
     def log_notification(self, notification_type, recipient, status, details=None):
         """

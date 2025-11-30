@@ -1,8 +1,3 @@
-/**
- * Doctor Search View Component 
- * Search doctors by name or filter by department.
- */
-
 const DoctorSearch = {
     name: 'DoctorSearch',
 

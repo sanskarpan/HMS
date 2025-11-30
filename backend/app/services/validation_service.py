@@ -1,7 +1,5 @@
 """
-Backend Validation Service
-Provides comprehensive server-side validation for all API endpoints.
-Sanitizes input to prevent injection attacks.
+Validation helpers for API input. Sanitizes and validates request data.
 """
 import re
 import logging
@@ -14,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class ValidationError(Exception):
-    """Custom exception for validation errors."""
+    """Raised when validation fails."""
     def __init__(self, errors: List[str], field: str = None):
         self.errors = errors if isinstance(errors, list) else [errors]
         self.field = field
@@ -22,9 +20,9 @@ class ValidationError(Exception):
 
 
 class Validator:
-    """Input validator with common validation rules."""
+    """Common validation methods and patterns."""
 
-    # Regex patterns for validation
+    # Regex patterns
     PATTERNS = {
         'email': re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'),
         'username': re.compile(r'^[a-zA-Z0-9_]{3,50}$'),
@@ -36,7 +34,7 @@ class Validator:
         'safe_text': re.compile(r'^[a-zA-Z0-9\s\.,!?\'"-]+$'),
     }
 
-    # Length constraints
+    # Length limits
     LENGTHS = {
         'username': (3, 50),
         'password': (6, 128),
@@ -50,7 +48,7 @@ class Validator:
 
     @staticmethod
     def sanitize(value: Any) -> Any:
-        """Sanitize input to prevent XSS and injection attacks."""
+        """Escape HTML chars and strip whitespace."""
         if value is None:
             return None
         if isinstance(value, str):
@@ -74,7 +72,7 @@ class Validator:
 
     @staticmethod
     def validate_required(value: Any, field_name: str) -> Tuple[bool, str]:
-        """Check if a required field has a value."""
+        """Check if field is present."""
         if value is None:
             return False, f'{field_name} is required'
         if isinstance(value, str) and not value.strip():
@@ -83,7 +81,7 @@ class Validator:
 
     @staticmethod
     def validate_length(value: str, field_name: str, min_len: int = None, max_len: int = None) -> Tuple[bool, str]:
-        """Validate string length."""
+        """Check string length bounds."""
         if value is None:
             return True, ''
         length = len(value)
@@ -95,7 +93,7 @@ class Validator:
 
     @staticmethod
     def validate_pattern(value: str, pattern_name: str, field_name: str) -> Tuple[bool, str]:
-        """Validate string against a regex pattern."""
+        """Match value against regex."""
         if value is None:
             return True, ''
         pattern = Validator.PATTERNS.get(pattern_name)
@@ -105,7 +103,7 @@ class Validator:
 
     @staticmethod
     def validate_email(email: str, required: bool = True) -> Tuple[bool, str]:
-        """Validate email format."""
+        """Check email format."""
         if not email and not required:
             return True, ''
         valid, msg = Validator.validate_required(email, 'Email')
@@ -118,7 +116,7 @@ class Validator:
 
     @staticmethod
     def validate_username(username: str, required: bool = True) -> Tuple[bool, str]:
-        """Validate username format."""
+        """Check username format and length."""
         if not username and not required:
             return True, ''
         valid, msg = Validator.validate_required(username, 'Username')
@@ -131,7 +129,7 @@ class Validator:
 
     @staticmethod
     def validate_password(password: str, required: bool = True) -> Tuple[bool, str]:
-        """Validate password strength."""
+        """Check password length."""
         if not password and not required:
             return True, ''
         valid, msg = Validator.validate_required(password, 'Password')
@@ -141,7 +139,7 @@ class Validator:
 
     @staticmethod
     def validate_phone(phone: str, required: bool = False) -> Tuple[bool, str]:
-        """Validate phone number format."""
+        """Check phone format."""
         if not phone and not required:
             return True, ''
         if not phone and required:
@@ -150,7 +148,7 @@ class Validator:
 
     @staticmethod
     def validate_name(name: str, field_name: str = 'Name', required: bool = True) -> Tuple[bool, str]:
-        """Validate name format."""
+        """Check name format."""
         if not name and not required:
             return True, ''
         valid, msg = Validator.validate_required(name, field_name)
@@ -164,7 +162,7 @@ class Validator:
     @staticmethod
     def validate_date(date_str: str, field_name: str = 'Date', required: bool = True,
                       min_date: date = None, max_date: date = None) -> Tuple[bool, str]:
-        """Validate date format and range."""
+        """Check date in YYYY-MM-DD format."""
         if not date_str and not required:
             return True, ''
         if not date_str and required:
@@ -184,7 +182,7 @@ class Validator:
 
     @staticmethod
     def validate_time(time_str: str, field_name: str = 'Time', required: bool = True) -> Tuple[bool, str]:
-        """Validate time format (HH:MM)."""
+        """Check time in HH:MM format."""
         if not time_str and not required:
             return True, ''
         if not time_str and required:
@@ -194,7 +192,7 @@ class Validator:
     @staticmethod
     def validate_integer(value: Any, field_name: str, required: bool = True,
                          min_val: int = None, max_val: int = None) -> Tuple[bool, str]:
-        """Validate integer value and range."""
+        """Check integer and bounds."""
         if value is None and not required:
             return True, ''
         if value is None and required:
@@ -215,7 +213,7 @@ class Validator:
     @staticmethod
     def validate_float(value: Any, field_name: str, required: bool = True,
                        min_val: float = None, max_val: float = None) -> Tuple[bool, str]:
-        """Validate float value and range."""
+        """Check float and bounds."""
         if value is None and not required:
             return True, ''
         if value is None and required:
@@ -236,7 +234,7 @@ class Validator:
     @staticmethod
     def validate_enum(value: str, allowed_values: List[str], field_name: str,
                       required: bool = True) -> Tuple[bool, str]:
-        """Validate value is in allowed list."""
+        """Check value is one of allowed options."""
         if not value and not required:
             return True, ''
         if not value and required:
@@ -247,29 +245,13 @@ class Validator:
 
 
 class SchemaValidator:
-    """Schema-based validator for complex objects."""
+    """Validates dict data against a schema definition."""
 
     def __init__(self):
         self.errors: List[str] = {}
 
     def validate(self, data: Dict[str, Any], schema: Dict[str, Dict]) -> Tuple[bool, Dict[str, str]]:
-        """
-        Validate data against a schema.
-
-        Schema format:
-        {
-            'field_name': {
-                'type': 'string|integer|float|email|date|time|enum',
-                'required': True|False,
-                'min': min_value,
-                'max': max_value,
-                'min_length': min_length,
-                'max_length': max_length,
-                'values': [allowed_values],  # for enum type
-                'custom': validation_function
-            }
-        }
-        """
+        """Run all field validations defined in schema. Returns (is_valid, errors)."""
         errors = {}
 
         for field_name, rules in schema.items():
@@ -332,7 +314,7 @@ class SchemaValidator:
         return len(errors) == 0, errors
 
 
-# Common validation schemas
+# Predefined schemas for common data types
 SCHEMAS = {
     'login': {
         'username': {'type': 'string', 'required': True, 'min_length': 1},
@@ -372,18 +354,7 @@ SCHEMAS = {
 
 
 def validate_request(schema_name: str = None, schema: Dict = None):
-    """
-    Decorator to validate request data against a schema.
-
-    Usage:
-        @validate_request('login')
-        def login():
-            ...
-
-        @validate_request(schema={'email': {'type': 'email'}})
-        def custom_endpoint():
-            ...
-    """
+    """Decorator that validates JSON body before calling the route handler."""
     def decorator(f: Callable):
         @wraps(f)
         def decorated_function(*args, **kwargs):
@@ -418,12 +389,9 @@ def validate_request(schema_name: str = None, schema: Dict = None):
     return decorator
 
 
-# Convenience function to validate data programmatically
+# Direct validation without decorator
 def validate_data(data: Dict, schema_name: str = None, schema: Dict = None) -> Tuple[bool, Dict]:
-    """
-    Validate data against a schema.
-    Returns: (is_valid, errors_dict)
-    """
+    """Validate dict against schema. Returns (is_valid, errors)."""
     validation_schema = schema or SCHEMAS.get(schema_name, {})
     if not validation_schema:
         return True, {}

@@ -1,10 +1,7 @@
-/**
- * Patient Service - API client for patient-related operations
- * Reuses the base api object for DRY implementation
- */
+// Patient service - handles patient API calls
 
 const patientService = {
-    // Dashboard & Profile (Ticket 5.1)
+    // Dashboard & Profile
     async getDashboardStats() {
         return await api.get('/patient/dashboard/stats');
     },
@@ -17,7 +14,7 @@ const patientService = {
         return await api.put('/patient/profile', profileData);
     },
 
-    // Departments & Doctor Search (Ticket 5.2)
+    // Departments & Doctors
     async getDepartments() {
         return await api.get('/patient/departments');
     },
@@ -42,7 +39,7 @@ const patientService = {
         return await api.get(`/patient/doctors/${doctorId}/slots?date=${date}`);
     },
 
-    // Appointments (Ticket 5.3)
+    // Appointments
     async getAppointments(params = {}) {
         const queryParams = new URLSearchParams();
         if (params.status) queryParams.append('status', params.status);
@@ -70,7 +67,7 @@ const patientService = {
         });
     },
 
-    // History & Treatments (Ticket 5.4)
+    // History & Treatments
     async getAppointmentHistory() {
         return await api.get('/patient/history');
     },
@@ -83,7 +80,7 @@ const patientService = {
         return await api.get(`/patient/treatments/${treatmentId}`);
     },
 
-    // CSV Export (Ticket 7.6, 7.7)
+    // CSV Export
     async triggerExport() {
         return await api.post('/patient/export-history', {});
     },
@@ -97,7 +94,6 @@ const patientService = {
     },
 
     async downloadExportDirect() {
-        // For synchronous fallback download
         const token = localStorage.getItem('token');
         const response = await fetch(`${api.baseURL}/patient/export-history`, {
             method: 'POST',
@@ -108,15 +104,12 @@ const patientService = {
         });
 
         if (response.headers.get('content-type')?.includes('text/csv')) {
-            // Synchronous download - return the blob
             const blob = await response.blob();
             return { success: true, blob };
         } else {
-            // Async task started
             return await response.json();
         }
     }
 };
 
-// Make available globally
 window.patientService = patientService;

@@ -1,8 +1,3 @@
-/**
- * Patient Treatments View Component
- * Shows all treatment records.
- */
-
 const PatientTreatments = {
     name: 'PatientTreatments',
 

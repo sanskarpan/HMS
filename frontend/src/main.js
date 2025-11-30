@@ -1,11 +1,7 @@
-/**
- * Main Vue Application Entry Point
- * Initializes Vue app with router and global components.
- */
+// Main Vue app setup
 
 const { createApp } = Vue;
 
-// Root App Component
 const AppComponent = {
     name: 'App',
     template: `
@@ -19,17 +15,12 @@ const AppComponent = {
     }
 };
 
-// Create Vue application
 const app = createApp(AppComponent);
 
-// Register global components
 app.component('navbar', Navbar);
 app.component('app-component', AppComponent);
 
-// Use router
 app.use(router);
-
-// Mount application
 app.mount('#app');
 
 console.log('Hospital Management System initialized');

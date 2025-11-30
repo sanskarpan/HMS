@@ -1,6 +1,5 @@
 """
-Authentication API routes for the Hospital Management System.
-Handles login, registration, logout, and token refresh.
+Auth routes - login, registration, logout, token management
 """
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import (
@@ -23,34 +22,19 @@ auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    """
-    Login endpoint for all users (admin, doctor, patient).
-
-    Request Body:
-        {
-            "username": "string (username or email)",
-            "password": "string"
-        }
-
-    Returns:
-        - 200: Success with JWT tokens and user info
-        - 400: Missing credentials
-        - 401: Invalid credentials
-        - 403: Account inactive/blacklisted
-    """
+    """Handle user login for admin, doctor, or patient accounts."""
     data = request.get_json()
 
     if not data:
         return jsonify({
             'success': False,
-            'message': 'Request body is required',
+            'message': 'No data provided',
             'error': 'bad_request'
         }), 400
 
     username = data.get('username', '').strip()
     password = data.get('password', '')
 
-    # Validate required fields
     if not username or not password:
         return jsonify({
             'success': False,
@@ -58,7 +42,6 @@ def login():
             'error': 'missing_credentials'
         }), 400
 
-    # Validate credentials
     user, error = validate_login_credentials(username, password)
 
     if error:
@@ -68,52 +51,28 @@ def login():
             'error': 'invalid_credentials'
         }), 401
 
-    # Generate response with tokens
     response = create_auth_response(user, "Login successful")
     return jsonify(response), 200
 
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    """
-    Registration endpoint for patients only.
-    Doctors and admins cannot self-register.
-
-    Request Body:
-        {
-            "username": "string",
-            "email": "string",
-            "password": "string",
-            "full_name": "string",
-            "phone": "string",
-            "date_of_birth": "YYYY-MM-DD (optional)",
-            "gender": "male|female|other (optional)",
-            "address": "string (optional)",
-            "blood_group": "string (optional)"
-        }
-
-    Returns:
-        - 201: Success with JWT tokens and user info
-        - 400: Validation error
-        - 409: Username/email already exists
-    """
+    """Register a new patient account. Doctors/admins cannot self-register."""
     data = request.get_json()
 
     if not data:
         return jsonify({
             'success': False,
-            'message': 'Request body is required',
+            'message': 'No data provided',
             'error': 'bad_request'
         }), 400
 
-    # Extract required fields
     username = data.get('username', '').strip()
     email = data.get('email', '').strip().lower()
     password = data.get('password', '')
     full_name = data.get('full_name', '').strip()
     phone = data.get('phone', '').strip()
 
-    # Validate required fields
     errors = []
     if not username:
         errors.append('Username is required')
@@ -133,15 +92,12 @@ def register():
             'errors': errors
         }), 400
 
-    # Validate username length
     if len(username) < 3:
         errors.append('Username must be at least 3 characters')
 
-    # Validate password length
     if len(password) < 6:
         errors.append('Password must be at least 6 characters')
 
-    # Validate email format (basic check)
     if '@' not in email or '.' not in email:
         errors.append('Invalid email format')
 
@@ -152,7 +108,6 @@ def register():
             'errors': errors
         }), 400
 
-    # Check if username already exists
     if User.find_by_username(username):
         return jsonify({
             'success': False,
@@ -160,7 +115,6 @@ def register():
             'error': 'username_taken'
         }), 409
 
-    # Check if email already exists
     if User.find_by_email(email):
         return jsonify({
             'success': False,
@@ -169,7 +123,6 @@ def register():
         }), 409
 
     try:
-        # Create user account
         user = User(
             username=username,
             email=email,
@@ -177,17 +130,15 @@ def register():
             role='patient'
         )
         db.session.add(user)
-        db.session.flush()  # Get user ID without committing
+        db.session.flush()
 
-        # Parse optional date_of_birth
         date_of_birth = None
         if data.get('date_of_birth'):
             try:
                 date_of_birth = datetime.strptime(data['date_of_birth'], '%Y-%m-%d').date()
             except ValueError:
-                pass  # Ignore invalid date format
+                pass
 
-        # Create patient profile
         patient = Patient(
             user_id=user.id,
             full_name=full_name,
@@ -202,7 +153,6 @@ def register():
         db.session.add(patient)
         db.session.commit()
 
-        # Generate response with tokens
         response = create_auth_response(user, "Registration successful")
         return jsonify(response), 201
 
@@ -218,13 +168,7 @@ def register():
 @auth_bp.route('/me', methods=['GET'])
 @login_required
 def get_current_user_info():
-    """
-    Get current authenticated user's information.
-
-    Returns:
-        - 200: User info with profile
-        - 401: Not authenticated
-    """
+    """Fetch info for the logged-in user."""
     user = get_current_user_from_request()
 
     if not user:
@@ -243,17 +187,9 @@ def get_current_user_info():
 @auth_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
 def refresh_token():
-    """
-    Refresh access token using refresh token.
-
-    Returns:
-        - 200: New access token
-        - 401: Invalid refresh token
-    """
-    # Identity is user_id as string
+    """Generate new access token using refresh token."""
     identity = get_jwt_identity()
 
-    # Verify user still exists and is active
     user = User.query.get(int(identity))
     if not user or not user.can_login:
         return jsonify({
@@ -262,7 +198,6 @@ def refresh_token():
             'error': 'invalid_user'
         }), 401
 
-    # Generate new access token with same identity format
     new_access_token = create_access_token(
         identity=identity,
         additional_claims={
@@ -283,17 +218,9 @@ def refresh_token():
 @login_required
 def logout():
     """
-    Logout endpoint.
-
-    Note: With JWT, logout is handled client-side by removing the token.
-    This endpoint is provided for API completeness and can be extended
-    to implement token blacklisting if needed.
-
-    Returns:
-        - 200: Logout successful
+    Handle logout. JWT logout is client-side (token removal),
+    but this endpoint exists for API consistency.
     """
-    # In a production app, you might add the token to a blacklist here
-    # For now, we just return success
     return jsonify({
         'success': True,
         'message': 'Logout successful'
@@ -303,27 +230,14 @@ def logout():
 @auth_bp.route('/change-password', methods=['POST'])
 @login_required
 def change_password():
-    """
-    Change password for authenticated user.
-
-    Request Body:
-        {
-            "current_password": "string",
-            "new_password": "string"
-        }
-
-    Returns:
-        - 200: Password changed successfully
-        - 400: Validation error
-        - 401: Current password incorrect
-    """
+    """Update password for the authenticated user."""
     user = get_current_user_from_request()
     data = request.get_json()
 
     if not data:
         return jsonify({
             'success': False,
-            'message': 'Request body is required',
+            'message': 'No data provided',
             'error': 'bad_request'
         }), 400
 
@@ -333,7 +247,7 @@ def change_password():
     if not current_password or not new_password:
         return jsonify({
             'success': False,
-            'message': 'Current password and new password are required',
+            'message': 'Both current and new password required',
             'error': 'missing_fields'
         }), 400
 
@@ -344,7 +258,6 @@ def change_password():
             'error': 'password_too_short'
         }), 400
 
-    # Verify current password
     if not user.check_password(current_password):
         return jsonify({
             'success': False,
@@ -352,7 +265,6 @@ def change_password():
             'error': 'invalid_password'
         }), 401
 
-    # Update password
     user.set_password(new_password)
     db.session.commit()
 

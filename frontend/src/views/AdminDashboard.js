@@ -1,8 +1,3 @@
-/**
- * Admin Dashboard View Component
- * Displays admin-specific statistics and management options.
- */
-
 const AdminDashboard = {
     name: 'AdminDashboard',
 

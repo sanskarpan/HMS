@@ -1,8 +1,3 @@
-/**
- * Doctor Availability View Component
- * Allows doctors to set their availability for the next 7 days.
- */
-
 const DoctorAvailability = {
     name: 'DoctorAvailability',
 

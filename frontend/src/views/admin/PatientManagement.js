@@ -1,8 +1,3 @@
-/**
- * Patient Management View Component
- * Admin interface for managing patients (search, view, blacklist).
- */
-
 const PatientManagement = {
     name: 'PatientManagement',
 

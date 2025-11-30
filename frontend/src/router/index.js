@@ -1,13 +1,6 @@
-/**
- * Vue Router Configuration with Authentication Guards
- * Handles route protection based on authentication and user roles.
- */
-
 const { createRouter, createWebHistory } = VueRouter;
 
-// Define routes
 const routes = [
-    // Public routes
     {
         path: '/',
         redirect: '/login'
@@ -24,8 +17,6 @@ const routes = [
         component: Register,
         meta: { public: true, onlyGuest: true }
     },
-
-    // Admin routes
     {
         path: '/admin/dashboard',
         name: 'AdminDashboard',
@@ -56,8 +47,6 @@ const routes = [
         component: AdminDashboard, // TODO
         meta: { requiresAuth: true, role: 'admin' }
     },
-
-    // Doctor routes
     {
         path: '/doctor/dashboard',
         name: 'DoctorDashboard',
@@ -88,8 +77,6 @@ const routes = [
         component: DoctorProfile,
         meta: { requiresAuth: true, role: 'doctor' }
     },
-
-    // Patient routes
     {
         path: '/patient/dashboard',
         name: 'PatientDashboard',
@@ -144,8 +131,6 @@ const routes = [
         component: PatientProfile,
         meta: { requiresAuth: true, role: 'patient' }
     },
-
-    // Catch-all route (404)
     {
         path: '/:pathMatch(.*)*',
         name: 'NotFound',
@@ -161,45 +146,33 @@ const routes = [
     }
 ];
 
-// Create router instance
 const router = createRouter({
     history: createWebHistory(),
     routes
 });
 
-// Navigation guard for authentication and role-based access
 router.beforeEach((to, from, next) => {
     const isAuthenticated = authService.isAuthenticated();
     const userRole = authService.getRole();
 
-    // Public routes that don't require auth
     if (to.meta.public) {
-        // If user is logged in and tries to access guest-only pages (login/register)
         if (to.meta.onlyGuest && isAuthenticated) {
             return next(authService.getDashboardRoute());
         }
         return next();
     }
 
-    // Protected routes
     if (to.meta.requiresAuth) {
         if (!isAuthenticated) {
-            // Not logged in - redirect to login
             return next('/login');
         }
-
-        // Check role if specified
         if (to.meta.role && to.meta.role !== userRole) {
-            // Wrong role - redirect to correct dashboard
             return next(authService.getDashboardRoute());
         }
-
         return next();
     }
 
-    // Default - allow
     next();
 });
 
-// Make router available globally
 window.router = router;

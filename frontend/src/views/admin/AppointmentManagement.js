@@ -1,8 +1,3 @@
-/**
- * Appointment Management View Component
- * Admin interface for viewing and managing all appointments.
- */
-
 const AppointmentManagement = {
     name: 'AppointmentManagement',
 

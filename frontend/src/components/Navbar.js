@@ -1,8 +1,3 @@
-/**
- * Navbar Component
- * Displays navigation bar with user info and logout button when authenticated.
- */
-
 const Navbar = {
     name: 'Navbar',
 

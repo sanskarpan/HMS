@@ -1,11 +1,6 @@
-/**
- * Frontend Validation Service
- * Provides comprehensive form validation with inline error messages.
- * Matches backend validation rules for consistency.
- */
+// Form validation service - matches backend validation rules
 
 const validationService = {
-    // Validation Rules
     rules: {
         username: {
             minLength: 3,
@@ -51,18 +46,10 @@ const validationService = {
         }
     },
 
-    /**
-     * Validate a single field
-     * @param {string} fieldType - Type of field (username, email, etc.)
-     * @param {any} value - Value to validate
-     * @param {Object} options - Additional options (required, custom message)
-     * @returns {Object} { valid: boolean, message: string }
-     */
     validateField(fieldType, value, options = {}) {
         const rule = this.rules[fieldType];
         const { required = true, customMessage = null } = options;
 
-        // Check required
         if (required && (!value || (typeof value === 'string' && !value.trim()))) {
             return {
                 valid: false,
@@ -70,7 +57,6 @@ const validationService = {
             };
         }
 
-        // Skip validation if not required and empty
         if (!required && (!value || (typeof value === 'string' && !value.trim()))) {
             return { valid: true, message: '' };
         }
@@ -79,10 +65,8 @@ const validationService = {
             return { valid: true, message: '' };
         }
 
-        // String value validation
         const strValue = String(value).trim();
 
-        // Min length check
         if (rule.minLength && strValue.length < rule.minLength) {
             return {
                 valid: false,
@@ -90,7 +74,6 @@ const validationService = {
             };
         }
 
-        // Max length check
         if (rule.maxLength && strValue.length > rule.maxLength) {
             return {
                 valid: false,
@@ -98,7 +81,6 @@ const validationService = {
             };
         }
 
-        // Pattern check
         if (rule.pattern && !rule.pattern.test(strValue)) {
             return {
                 valid: false,
@@ -106,7 +88,6 @@ const validationService = {
             };
         }
 
-        // Numeric min/max
         if (rule.min !== undefined || rule.max !== undefined) {
             const numValue = parseFloat(value);
             if (isNaN(numValue)) {
@@ -132,29 +113,14 @@ const validationService = {
         return { valid: true, message: '' };
     },
 
-    /**
-     * Validate email format
-     * @param {string} email
-     * @returns {Object} { valid: boolean, message: string }
-     */
     validateEmail(email) {
         return this.validateField('email', email);
     },
 
-    /**
-     * Validate username
-     * @param {string} username
-     * @returns {Object} { valid: boolean, message: string }
-     */
     validateUsername(username) {
         return this.validateField('username', username);
     },
 
-    /**
-     * Validate password with strength indicator
-     * @param {string} password
-     * @returns {Object} { valid: boolean, message: string, strength: string }
-     */
     validatePassword(password) {
         const result = this.validateField('password', password);
 
@@ -162,7 +128,6 @@ const validationService = {
             return { ...result, strength: 'weak' };
         }
 
-        // Calculate password strength
         let strength = 0;
         if (password.length >= 8) strength++;
         if (password.length >= 12) strength++;
@@ -192,12 +157,6 @@ const validationService = {
         };
     },
 
-    /**
-     * Validate password confirmation
-     * @param {string} password
-     * @param {string} confirmPassword
-     * @returns {Object} { valid: boolean, message: string }
-     */
     validatePasswordMatch(password, confirmPassword) {
         if (!confirmPassword) {
             return { valid: false, message: 'Please confirm your password' };
@@ -208,24 +167,13 @@ const validationService = {
         return { valid: true, message: '' };
     },
 
-    /**
-     * Validate phone number
-     * @param {string} phone
-     * @param {boolean} required
-     * @returns {Object} { valid: boolean, message: string }
-     */
     validatePhone(phone, required = true) {
         return this.validateField('phone', phone, { required });
     },
 
-    /**
-     * Validate date of birth
-     * @param {string} dateString - Date in YYYY-MM-DD format
-     * @returns {Object} { valid: boolean, message: string }
-     */
     validateDateOfBirth(dateString) {
         if (!dateString) {
-            return { valid: true, message: '' }; // Optional field
+            return { valid: true, message: '' };
         }
 
         const date = new Date(dateString);
@@ -248,11 +196,6 @@ const validationService = {
         return { valid: true, message: '' };
     },
 
-    /**
-     * Validate appointment date
-     * @param {string} dateString - Date in YYYY-MM-DD format
-     * @returns {Object} { valid: boolean, message: string }
-     */
     validateAppointmentDate(dateString) {
         if (!dateString) {
             return { valid: false, message: 'Please select a date' };
@@ -270,7 +213,6 @@ const validationService = {
             return { valid: false, message: 'Cannot book appointments in the past' };
         }
 
-        // Max 7 days in advance
         const maxDate = new Date();
         maxDate.setDate(maxDate.getDate() + 7);
         if (date > maxDate) {
@@ -280,12 +222,6 @@ const validationService = {
         return { valid: true, message: '' };
     },
 
-    /**
-     * Validate a form with multiple fields
-     * @param {Object} formData - Form data object
-     * @param {Object} validations - Validation rules for each field
-     * @returns {Object} { valid: boolean, errors: Object }
-     */
     validateForm(formData, validations) {
         const errors = {};
         let valid = true;
@@ -295,13 +231,10 @@ const validationService = {
             let result;
 
             if (typeof config === 'function') {
-                // Custom validation function
                 result = config(value, formData);
             } else if (typeof config === 'string') {
-                // Simple field type validation
                 result = this.validateField(config, value);
             } else {
-                // Object config
                 result = this.validateField(config.type, value, config);
             }
 
@@ -314,11 +247,6 @@ const validationService = {
         return { valid, errors };
     },
 
-    /**
-     * Sanitize input to prevent XSS
-     * @param {string} input
-     * @returns {string} Sanitized input
-     */
     sanitize(input) {
         if (typeof input !== 'string') return input;
         return input
@@ -330,35 +258,20 @@ const validationService = {
             .trim();
     },
 
-    /**
-     * Apply validation class to form element
-     * @param {HTMLElement} element
-     * @param {boolean} isValid
-     */
     setValidationState(element, isValid) {
         if (!element) return;
         element.classList.remove('is-valid', 'is-invalid');
         element.classList.add(isValid ? 'is-valid' : 'is-invalid');
     },
 
-    /**
-     * Clear validation state from element
-     * @param {HTMLElement} element
-     */
     clearValidationState(element) {
         if (!element) return;
         element.classList.remove('is-valid', 'is-invalid');
     },
 
-    /**
-     * Show inline error message
-     * @param {HTMLElement} element
-     * @param {string} message
-     */
     showError(element, message) {
         if (!element) return;
 
-        // Find or create feedback element
         let feedback = element.parentElement.querySelector('.invalid-feedback');
         if (!feedback) {
             feedback = document.createElement('div');
@@ -370,10 +283,6 @@ const validationService = {
         this.setValidationState(element, false);
     },
 
-    /**
-     * Clear error from element
-     * @param {HTMLElement} element
-     */
     clearError(element) {
         if (!element) return;
 
@@ -385,5 +294,4 @@ const validationService = {
     }
 };
 
-// Make service available globally
 window.validationService = validationService;

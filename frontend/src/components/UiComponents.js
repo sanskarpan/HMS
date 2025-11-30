@@ -1,9 +1,6 @@
-/**
- * Reusable UI Components
- * Provides consistent loading states, empty states, error states, and toast notifications.
- */
+// Shared UI components for loading, empty states, errors, toasts, etc.
 
-// Loading Spinner Component
+// Loading Spinner
 const LoadingSpinner = {
     name: 'LoadingSpinner',
     props: {
@@ -43,7 +40,7 @@ const LoadingSpinner = {
     `
 };
 
-// Empty State Component
+// Shows when there's no data
 const EmptyState = {
     name: 'EmptyState',
     props: {
@@ -86,7 +83,7 @@ const EmptyState = {
     `
 };
 
-// Error State Component
+// Error display with retry option
 const ErrorState = {
     name: 'ErrorState',
     props: {
@@ -125,7 +122,7 @@ const ErrorState = {
     `
 };
 
-// Toast Notification Component
+// Toast messages
 const ToastNotification = {
     name: 'ToastNotification',
     props: {
@@ -213,7 +210,7 @@ const ToastNotification = {
     `
 };
 
-// Confirm Dialog Component
+// Modal for confirming actions
 const ConfirmDialog = {
     name: 'ConfirmDialog',
     props: {
@@ -289,7 +286,7 @@ const ConfirmDialog = {
     `
 };
 
-// Status Badge Component
+// Colored badge for status display
 const StatusBadge = {
     name: 'StatusBadge',
     props: {
@@ -338,7 +335,7 @@ const StatusBadge = {
     `
 };
 
-// Pagination Component
+// Page navigation
 const Pagination = {
     name: 'Pagination',
     props: {
@@ -417,7 +414,7 @@ const Pagination = {
     `
 };
 
-// Search Input Component
+// Search box with debounce
 const SearchInput = {
     name: 'SearchInput',
     props: {
@@ -481,7 +478,7 @@ const SearchInput = {
     `
 };
 
-// Export all components
+// Register globally
 window.LoadingSpinner = LoadingSpinner;
 window.EmptyState = EmptyState;
 window.ErrorState = ErrorState;

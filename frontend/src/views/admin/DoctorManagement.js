@@ -1,8 +1,3 @@
-/**
- * Doctor Management View Component
- * Admin interface for managing doctors (CRUD operations).
- */
-
 const DoctorManagement = {
     name: 'DoctorManagement',
 

@@ -1,8 +1,3 @@
-/**
- * Patient Dashboard View Component 
- * Displays dashboard stats, departments, today's appointments, and quick actions.
- */
-
 const PatientDashboard = {
     name: 'PatientDashboard',
 

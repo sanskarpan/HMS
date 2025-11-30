@@ -1,8 +1,3 @@
-/**
- * Department Details View Component 
- * Shows doctors in a department with booking options.
- */
-
 const DepartmentDetails = {
     name: 'DepartmentDetails',
 

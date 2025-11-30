@@ -1,8 +1,3 @@
-/**
- * Login View Component
- * Handles user authentication with username/email and password.
- */
-
 const Login = {
     name: 'Login',
 

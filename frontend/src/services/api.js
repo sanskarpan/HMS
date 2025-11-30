@@ -1,28 +1,16 @@
-/**
- * API utility for making HTTP requests to the backend.
- * Handles authentication tokens and error responses.
- */
+// API utility for making HTTP requests to the backend
 
 const API_BASE_URL = '/api';
 
 const api = {
-    /**
-     * Get the stored authentication token.
-     */
     getToken() {
         return localStorage.getItem('access_token');
     },
 
-    /**
-     * Get the refresh token.
-     */
     getRefreshToken() {
         return localStorage.getItem('refresh_token');
     },
 
-    /**
-     * Store authentication tokens.
-     */
     setTokens(accessToken, refreshToken) {
         localStorage.setItem('access_token', accessToken);
         if (refreshToken) {
@@ -30,40 +18,25 @@ const api = {
         }
     },
 
-    /**
-     * Clear stored tokens (logout).
-     */
     clearTokens() {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
     },
 
-    /**
-     * Store user data.
-     */
     setUser(user) {
         localStorage.setItem('user', JSON.stringify(user));
     },
 
-    /**
-     * Get stored user data.
-     */
     getUser() {
         const user = localStorage.getItem('user');
         return user ? JSON.parse(user) : null;
     },
 
-    /**
-     * Check if user is authenticated.
-     */
     isAuthenticated() {
         return !!this.getToken();
     },
 
-    /**
-     * Get headers for API requests.
-     */
     getHeaders(includeAuth = true) {
         const headers = {
             'Content-Type': 'application/json'
@@ -76,9 +49,6 @@ const api = {
         return headers;
     },
 
-    /**
-     * Make a GET request.
-     */
     async get(endpoint, includeAuth = true) {
         try {
             const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -91,9 +61,6 @@ const api = {
         }
     },
 
-    /**
-     * Make a POST request.
-     */
     async post(endpoint, data, includeAuth = true) {
         try {
             const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -107,9 +74,6 @@ const api = {
         }
     },
 
-    /**
-     * Make a PUT request.
-     */
     async put(endpoint, data, includeAuth = true) {
         try {
             const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -123,9 +87,6 @@ const api = {
         }
     },
 
-    /**
-     * Make a DELETE request.
-     */
     async delete(endpoint, includeAuth = true) {
         try {
             const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -138,18 +99,13 @@ const api = {
         }
     },
 
-    /**
-     * Handle API response.
-     */
     async handleResponse(response) {
         const data = await response.json();
 
         if (!response.ok) {
-            // Handle 401 - try to refresh token
             if (response.status === 401 && this.getRefreshToken()) {
                 const refreshed = await this.refreshToken();
                 if (refreshed) {
-                    // Signal to retry
                     return null;
                 }
             }
@@ -166,9 +122,6 @@ const api = {
         return data;
     },
 
-    /**
-     * Handle network or other errors.
-     */
     handleError(error) {
         console.error('API Error:', error);
         return {
@@ -178,9 +131,6 @@ const api = {
         };
     },
 
-    /**
-     * Refresh the access token.
-     */
     async refreshToken() {
         try {
             const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
@@ -197,7 +147,6 @@ const api = {
                 return true;
             }
 
-            // Refresh failed - clear tokens and redirect to login
             this.clearTokens();
             return false;
         } catch (error) {
@@ -207,5 +156,4 @@ const api = {
     }
 };
 
-// Make api available globally
 window.api = api;

@@ -1,8 +1,3 @@
-/**
- * Register View Component
- * Handles patient registration with form validation.
- */
-
 const Register = {
     name: 'Register',
 

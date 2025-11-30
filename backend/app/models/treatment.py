@@ -1,36 +1,12 @@
-"""
-Treatment model for the Hospital Management System.
-Stores diagnosis, prescriptions, and medical notes for completed appointments.
-"""
 from . import db, TimestampMixin
 
 
 class Treatment(db.Model, TimestampMixin):
-    """
-    Treatment model for storing medical care records.
-
-    Each treatment is linked to a completed appointment and contains
-    diagnosis, prescription, and other medical notes.
-
-    Attributes:
-        appointment_id: Linked appointment
-        diagnosis: Medical diagnosis
-        prescription: Prescribed medications
-        notes: Doctor's notes
-        tests_recommended: Recommended lab tests or imaging
-        follow_up_date: Suggested follow-up visit date
-        visit_type: Type of visit (in-person, follow-up, emergency)
-    """
     __tablename__ = 'treatments'
 
-    # Primary key
     id = db.Column(db.Integer, primary_key=True)
-
-    # Foreign key - one treatment per appointment
     appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id'),
                                unique=True, nullable=False)
-
-    # Medical information
     diagnosis = db.Column(db.Text, nullable=False)
     prescription = db.Column(db.Text, nullable=True)
     notes = db.Column(db.Text, nullable=True)

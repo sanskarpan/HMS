@@ -1,31 +1,11 @@
-"""
-Appointment model for the Hospital Management System.
-Handles scheduling of doctor-patient meetings with conflict prevention.
-"""
 from datetime import datetime, date, timedelta
 from . import db, TimestampMixin
 
 
 class Appointment(db.Model, TimestampMixin):
-    """
-    Appointment model for doctor-patient meetings.
-
-    Attributes:
-        patient_id: Patient booking the appointment
-        doctor_id: Doctor for the appointment
-        department_id: Department/specialization
-        appointment_date: Date of appointment
-        appointment_time: Start time of appointment
-        status: Current status (booked, completed, cancelled, no_show)
-        reason: Reason for visit
-        notes: Additional notes
-    """
     __tablename__ = 'appointments'
 
-    # Primary key
     id = db.Column(db.Integer, primary_key=True)
-
-    # Foreign keys
     patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)
     doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'), nullable=False)
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)

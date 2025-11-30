@@ -1,8 +1,3 @@
-/**
- * Doctor Patients View Component
- * Displays patients assigned to the doctor with treatment history.
- */
-
 const DoctorPatients = {
     name: 'DoctorPatients',
 
