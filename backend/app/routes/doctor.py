@@ -3,7 +3,7 @@ Doctor API Routes for the Hospital Management System.
 Handles doctor dashboard, appointments, patients, treatments, and availability.
 """
 from flask import Blueprint, request, jsonify
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, date, timedelta
 
 from backend.app.models import (
     db, User, Doctor, Patient, Appointment, Treatment, DoctorAvailability, AppointmentStatusLog
