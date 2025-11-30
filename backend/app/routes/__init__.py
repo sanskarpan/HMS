@@ -5,6 +5,8 @@ from .auth import auth_bp
 from .admin import admin_bp
 from .doctor import doctor_bp
 from .patient import patient_bp
+from .payment import payment_bp
+from .reports import reports_bp
 
 
 def register_blueprints(app):
@@ -26,3 +28,9 @@ def register_blueprints(app):
 
     # Register patient routes
     app.register_blueprint(patient_bp, url_prefix='/api/patient')
+
+    # Register payment routes
+    app.register_blueprint(payment_bp, url_prefix='/api/payment')
+
+    # Register reports routes
+    app.register_blueprint(reports_bp, url_prefix='/api/reports')
