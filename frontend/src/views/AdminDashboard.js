@@ -80,7 +80,7 @@ const AdminDashboard = {
                     <div class="col-md-4">
                         <div class="card border-primary h-100">
                             <div class="card-body text-center">
-                                <h3 class="text-primary">{{ stats.appointments_by_status?.booked || 0 }}</h3>
+                                <h3 class="text-primary">{{ (stats.appointments_by_status && stats.appointments_by_status.booked) || 0 }}</h3>
                                 <p class="text-muted mb-0">Booked Appointments</p>
                             </div>
                         </div>
@@ -88,7 +88,7 @@ const AdminDashboard = {
                     <div class="col-md-4">
                         <div class="card border-success h-100">
                             <div class="card-body text-center">
-                                <h3 class="text-success">{{ stats.appointments_by_status?.completed || 0 }}</h3>
+                                <h3 class="text-success">{{ (stats.appointments_by_status && stats.appointments_by_status.completed) || 0 }}</h3>
                                 <p class="text-muted mb-0">Completed</p>
                             </div>
                         </div>
@@ -96,7 +96,7 @@ const AdminDashboard = {
                     <div class="col-md-4">
                         <div class="card border-danger h-100">
                             <div class="card-body text-center">
-                                <h3 class="text-danger">{{ stats.appointments_by_status?.cancelled || 0 }}</h3>
+                                <h3 class="text-danger">{{ (stats.appointments_by_status && stats.appointments_by_status.cancelled) || 0 }}</h3>
                                 <p class="text-muted mb-0">Cancelled</p>
                             </div>
                         </div>
@@ -121,6 +121,12 @@ const AdminDashboard = {
                                     </router-link>
                                     <router-link to="/admin/appointments" class="btn btn-outline-warning">
                                         <i class="bi bi-calendar3"></i> View Appointments
+                                    </router-link>
+                                    <router-link to="/admin/charts" class="btn btn-outline-info">
+                                        <i class="bi bi-bar-chart"></i> Analytics Dashboard
+                                    </router-link>
+                                    <router-link to="/admin/payments" class="btn btn-outline-secondary">
+                                        <i class="bi bi-credit-card"></i> Payment Management
                                     </router-link>
                                 </div>
                             </div>

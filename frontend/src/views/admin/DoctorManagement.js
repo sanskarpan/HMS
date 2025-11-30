@@ -81,7 +81,7 @@ const DoctorManagement = {
                                     <td>
                                         <strong>{{ doctor.full_name }}</strong>
                                     </td>
-                                    <td>{{ doctor.department?.name || 'N/A' }}</td>
+                                    <td>{{ (doctor.department && doctor.department.name) || 'N/A' }}</td>
                                     <td>{{ doctor.qualification || 'N/A' }}</td>
                                     <td>{{ doctor.experience_years }} years</td>
                                     <td>{{ doctor.email }}</td>
@@ -223,7 +223,7 @@ const DoctorManagement = {
                             <button type="button" class="btn-close" @click="showDeleteModal = false"></button>
                         </div>
                         <div class="modal-body">
-                            <p>Are you sure you want to deactivate <strong>{{ selectedDoctor?.full_name }}</strong>?</p>
+                            <p>Are you sure you want to deactivate <strong>{{ selectedDoctor && selectedDoctor.full_name ? selectedDoctor.full_name : '' }}</strong>?</p>
                             <p class="text-muted small">This will prevent them from logging in.</p>
                         </div>
                         <div class="modal-footer">
@@ -331,7 +331,7 @@ const DoctorManagement = {
             this.selectedDoctor = doctor;
             this.doctorForm = {
                 full_name: doctor.full_name,
-                department_id: doctor.department?.id || '',
+                department_id: (doctor.department && doctor.department.id) || '',
                 qualification: doctor.qualification || '',
                 experience_years: doctor.experience_years || 0,
                 phone: doctor.phone || '',

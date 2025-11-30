@@ -23,6 +23,7 @@ from .patient import Patient
 from .appointment import Appointment
 from .treatment import Treatment
 from .status_log import AppointmentStatusLog
+from .payment import Payment
 
 # Export all models
 __all__ = [
@@ -35,5 +36,6 @@ __all__ = [
     'Patient',
     'Appointment',
     'Treatment',
-    'AppointmentStatusLog'
+    'AppointmentStatusLog',
+    'Payment'
 ]

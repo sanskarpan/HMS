@@ -670,3 +670,184 @@ def update_profile():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@doctor_bp.route('/charts/weekly-appointments', methods=['GET'])
+@doctor_required
+def get_weekly_appointments_chart():
+    """Get appointment counts for past 4 weeks for line chart."""
+    from sqlalchemy import func
+
+    doctor = get_current_doctor()
+    if not doctor:
+        return jsonify({'success': False, 'message': 'Doctor profile not found'}), 404
+
+    weeks = request.args.get('weeks', 4, type=int)
+    end_date = date.today()
+    start_date = end_date - timedelta(days=weeks * 7)
+
+    results = db.session.query(
+        Appointment.appointment_date,
+        func.count(Appointment.id)
+    ).filter(
+        Appointment.doctor_id == doctor.id,
+        Appointment.appointment_date >= start_date,
+        Appointment.appointment_date <= end_date
+    ).group_by(
+        Appointment.appointment_date
+    ).order_by(
+        Appointment.appointment_date
+    ).all()
+
+    date_counts = {r[0]: r[1] for r in results}
+
+    labels = []
+    data = []
+    current = start_date
+    while current <= end_date:
+        labels.append(current.strftime('%Y-%m-%d'))
+        data.append(date_counts.get(current, 0))
+        current += timedelta(days=1)
+
+    return jsonify({
+        'success': True,
+        'chart_data': {
+            'labels': labels,
+            'datasets': [{
+                'label': 'Appointments',
+                'data': data,
+                'borderColor': '#36A2EB',
+                'fill': False
+            }]
+        }
+    }), 200
+
+
+@doctor_bp.route('/charts/appointments-by-status', methods=['GET'])
+@doctor_required
+def get_doctor_appointments_by_status():
+    """Get appointment status distribution for doughnut chart."""
+    from sqlalchemy import func
+
+    doctor = get_current_doctor()
+    if not doctor:
+        return jsonify({'success': False, 'message': 'Doctor profile not found'}), 404
+
+    results = db.session.query(
+        Appointment.status,
+        func.count(Appointment.id)
+    ).filter(
+        Appointment.doctor_id == doctor.id
+    ).group_by(
+        Appointment.status
+    ).all()
+
+    labels = [r[0].title() for r in results]
+    data = [r[1] for r in results]
+
+    status_colors = {
+        'Booked': '#36A2EB',
+        'Completed': '#4BC0C0',
+        'Cancelled': '#FF6384',
+        'No_show': '#FFCE56'
+    }
+
+    colors = [status_colors.get(label, '#9966FF') for label in labels]
+
+    return jsonify({
+        'success': True,
+        'chart_data': {
+            'labels': labels,
+            'datasets': [{
+                'data': data,
+                'backgroundColor': colors
+            }]
+        }
+    }), 200
+
+
+@doctor_bp.route('/charts/patient-visits', methods=['GET'])
+@doctor_required
+def get_patient_visits_chart():
+    """Get top patients by visit count for bar chart."""
+    from sqlalchemy import func
+
+    doctor = get_current_doctor()
+    if not doctor:
+        return jsonify({'success': False, 'message': 'Doctor profile not found'}), 404
+
+    results = db.session.query(
+        Patient.full_name,
+        func.count(Appointment.id)
+    ).join(
+        Appointment, Patient.id == Appointment.patient_id
+    ).filter(
+        Appointment.doctor_id == doctor.id
+    ).group_by(
+        Patient.id, Patient.full_name
+    ).order_by(
+        func.count(Appointment.id).desc()
+    ).limit(10).all()
+
+    labels = [r[0] for r in results]
+    data = [r[1] for r in results]
+
+    return jsonify({
+        'success': True,
+        'chart_data': {
+            'labels': labels,
+            'datasets': [{
+                'label': 'Visits',
+                'data': data,
+                'backgroundColor': '#4BC0C0'
+            }]
+        }
+    }), 200
+
+
+@doctor_bp.route('/charts/monthly-summary', methods=['GET'])
+@doctor_required
+def get_monthly_summary_chart():
+    """Get monthly appointment summary for bar chart."""
+    from sqlalchemy import func, extract
+
+    doctor = get_current_doctor()
+    if not doctor:
+        return jsonify({'success': False, 'message': 'Doctor profile not found'}), 404
+
+    months = request.args.get('months', 6, type=int)
+    end_date = date.today()
+    start_date = end_date - timedelta(days=months * 30)
+
+    results = db.session.query(
+        extract('year', Appointment.appointment_date).label('year'),
+        extract('month', Appointment.appointment_date).label('month'),
+        func.count(Appointment.id)
+    ).filter(
+        Appointment.doctor_id == doctor.id,
+        Appointment.appointment_date >= start_date
+    ).group_by(
+        extract('year', Appointment.appointment_date),
+        extract('month', Appointment.appointment_date)
+    ).order_by(
+        extract('year', Appointment.appointment_date),
+        extract('month', Appointment.appointment_date)
+    ).all()
+
+    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+    labels = [f"{month_names[int(r[1])-1]} {int(r[0])}" for r in results]
+    data = [r[2] for r in results]
+
+    return jsonify({
+        'success': True,
+        'chart_data': {
+            'labels': labels,
+            'datasets': [{
+                'label': 'Appointments',
+                'data': data,
+                'backgroundColor': '#36A2EB'
+            }]
+        }
+    }), 200

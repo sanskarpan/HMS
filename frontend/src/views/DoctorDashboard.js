@@ -108,9 +108,9 @@ const DoctorDashboard = {
                                                     <strong>{{ apt.appointment_time }}</strong>
                                                 </td>
                                                 <td>
-                                                    {{ apt.patient?.full_name || 'N/A' }}
+                                                    {{ apt.patient && apt.patient.full_name ? apt.patient.full_name : 'N/A' }}
                                                     <br>
-                                                    <small class="text-muted">{{ apt.patient?.phone }}</small>
+                                                    <small class="text-muted">{{ apt.patient ? apt.patient.phone : '' }}</small>
                                                 </td>
                                                 <td>
                                                     <span class="badge" :class="getStatusClass(apt.status)">
@@ -154,6 +154,9 @@ const DoctorDashboard = {
                                     <router-link to="/doctor/availability" class="btn btn-outline-warning">
                                         <i class="bi bi-clock"></i> Update Availability
                                     </router-link>
+                                    <router-link to="/doctor/charts" class="btn btn-outline-info">
+                                        <i class="bi bi-bar-chart"></i> My Analytics
+                                    </router-link>
                                     <router-link to="/doctor/profile" class="btn btn-outline-secondary">
                                         <i class="bi bi-person"></i> Edit Profile
                                     </router-link>
@@ -192,9 +195,9 @@ const DoctorDashboard = {
                         </div>
                         <div class="modal-body">
                             <div class="alert alert-info mb-3">
-                                <strong>Patient:</strong> {{ selectedAppointment?.patient?.full_name }}
+                                <strong>Patient:</strong> {{ selectedAppointment && selectedAppointment.patient ? selectedAppointment.patient.full_name : '' }}
                                 <br>
-                                <strong>Time:</strong> {{ selectedAppointment?.appointment_time }}
+                                <strong>Time:</strong> {{ selectedAppointment ? selectedAppointment.appointment_time : '' }}
                             </div>
                             <form @submit.prevent="completeAppointment">
                                 <div class="mb-3">
@@ -302,8 +305,8 @@ const DoctorDashboard = {
                 if (response.success) {
                     this.stats = response.stats;
                     this.todayAppointments = response.stats.today_appointments_list || [];
-                    this.doctorName = response.doctor?.full_name || 'Doctor';
-                    this.departmentName = response.doctor?.department || '';
+                    this.doctorName = (response.doctor && response.doctor.full_name) ? response.doctor.full_name : 'Doctor';
+                    this.departmentName = (response.doctor && response.doctor.department) ? response.doctor.department : '';
                 } else {
                     this.error = response.message || 'Failed to load dashboard data';
                 }

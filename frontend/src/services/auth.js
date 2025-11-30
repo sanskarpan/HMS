@@ -2,7 +2,20 @@
  * Authentication service for login, registration, and session management.
  */
 
+// Simple event emitter for auth state changes
+const authEventTarget = new EventTarget();
+
 const authService = {
+    // Notify listeners of auth state changes
+    _notifyAuthChange() {
+        authEventTarget.dispatchEvent(new CustomEvent('authChange'));
+    },
+
+    // Subscribe to auth changes
+    onAuthChange(callback) {
+        authEventTarget.addEventListener('authChange', callback);
+        return () => authEventTarget.removeEventListener('authChange', callback);
+    },
     /**
      * Login with username/email and password.
      */
@@ -12,6 +25,7 @@ const authService = {
         if (response.success) {
             api.setTokens(response.access_token, response.refresh_token);
             api.setUser(response.user);
+            this._notifyAuthChange();
         }
 
         return response;
@@ -26,6 +40,7 @@ const authService = {
         if (response.success) {
             api.setTokens(response.access_token, response.refresh_token);
             api.setUser(response.user);
+            this._notifyAuthChange();
         }
 
         return response;
@@ -42,6 +57,7 @@ const authService = {
         }
 
         api.clearTokens();
+        this._notifyAuthChange();
     },
 
     /**

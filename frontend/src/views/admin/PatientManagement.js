@@ -180,15 +180,15 @@ const PatientManagement = {
                                     <h6 class="text-muted mt-3">Appointment Stats</h6>
                                     <div class="row text-center">
                                         <div class="col-4">
-                                            <h4 class="mb-0">{{ selectedPatient.appointment_stats?.total || 0 }}</h4>
+                                            <h4 class="mb-0">{{ (selectedPatient.appointment_stats && selectedPatient.appointment_stats.total) || 0 }}</h4>
                                             <small class="text-muted">Total</small>
                                         </div>
                                         <div class="col-4">
-                                            <h4 class="mb-0 text-success">{{ selectedPatient.appointment_stats?.completed || 0 }}</h4>
+                                            <h4 class="mb-0 text-success">{{ (selectedPatient.appointment_stats && selectedPatient.appointment_stats.completed) || 0 }}</h4>
                                             <small class="text-muted">Completed</small>
                                         </div>
                                         <div class="col-4">
-                                            <h4 class="mb-0 text-primary">{{ selectedPatient.appointment_stats?.upcoming || 0 }}</h4>
+                                            <h4 class="mb-0 text-primary">{{ (selectedPatient.appointment_stats && selectedPatient.appointment_stats.upcoming) || 0 }}</h4>
                                             <small class="text-muted">Upcoming</small>
                                         </div>
                                     </div>
@@ -303,7 +303,7 @@ const PatientManagement = {
                         <div class="modal-header">
                             <h5 class="modal-title">
                                 <i class="bi bi-file-medical me-2"></i>
-                                Treatment History - {{ selectedPatient?.full_name }}
+                                Treatment History - {{ selectedPatient && selectedPatient.full_name ? selectedPatient.full_name : '' }}
                             </h5>
                             <button type="button" class="btn-close" @click="showTreatmentModal = false"></button>
                         </div>
@@ -324,11 +324,11 @@ const PatientManagement = {
                                                 :data-bs-toggle="'collapse'" :data-bs-target="'#treatment' + treatment.id">
                                             <div class="d-flex w-100 justify-content-between align-items-center me-3">
                                                 <span>
-                                                    <strong>{{ formatDate(treatment.appointment?.date) }}</strong>
+                                                    <strong>{{ formatDate((treatment.appointment && treatment.appointment.date) || '') }}</strong>
                                                     <span class="text-muted ms-2">{{ treatment.visit_type }}</span>
                                                 </span>
                                                 <span class="badge bg-primary">
-                                                    Dr. {{ treatment.appointment?.doctor_name || 'N/A' }}
+                                                    Dr. {{ (treatment.appointment && treatment.appointment.doctor_name) || 'N/A' }}
                                                 </span>
                                             </div>
                                         </button>

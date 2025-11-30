@@ -1,6 +1,27 @@
 const Navbar = {
     name: 'Navbar',
 
+    data() {
+        return {
+            // Reactive key to force re-render on auth changes
+            authKey: 0
+        };
+    },
+
+    mounted() {
+        // Listen for auth state changes
+        this._unsubscribe = authService.onAuthChange(() => {
+            this.authKey++;
+        });
+    },
+
+    beforeUnmount() {
+        // Clean up listener
+        if (this._unsubscribe) {
+            this._unsubscribe();
+        }
+    },
+
     template: `
         <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm" v-if="isAuthenticated">
             <div class="container-fluid">
@@ -120,27 +141,37 @@ const Navbar = {
 
     computed: {
         isAuthenticated() {
+            // Depend on authKey to trigger re-computation
+            void this.authKey;
             return authService.isAuthenticated();
         },
         isAdmin() {
+            void this.authKey;
             return authService.isAdmin();
         },
         isDoctor() {
+            void this.authKey;
             return authService.isDoctor();
         },
         isPatient() {
+            void this.authKey;
             return authService.isPatient();
         },
         user() {
+            void this.authKey;
             return authService.getUser();
         },
         userName() {
             return this.user ? this.user.username : '';
         },
         userRole() {
-            return this.user ? this.user.role : '';
+            if (!this.user) return '';
+            // Capitalize role for display (e.g., "admin" -> "Admin")
+            const role = this.user.role;
+            return role.charAt(0).toUpperCase() + role.slice(1);
         },
         profileRoute() {
+            void this.authKey;
             const role = authService.getRole();
             return `/${role}/profile`;
         }

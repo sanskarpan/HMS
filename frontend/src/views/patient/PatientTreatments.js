@@ -21,16 +21,61 @@ const PatientTreatments = {
                         </div>
                         <button
                             class="btn btn-success"
-                            @click="exportToCSV"
+                            @click="showExportModal = true"
                             :disabled="exporting || treatments.length === 0">
-                            <span v-if="exporting">
-                                <span class="spinner-border spinner-border-sm me-1"></span>
-                                Exporting...
-                            </span>
-                            <span v-else>
-                                <i class="bi bi-download me-1"></i> Export as CSV
-                            </span>
+                            <i class="bi bi-download me-1"></i> Export as CSV
                         </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Choice Modal -->
+            <div v-if="showExportModal" class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="bi bi-download"></i> Export Treatment History
+                            </h5>
+                            <button type="button" class="btn-close" @click="showExportModal = false"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="mb-3">How would you like to receive your treatment history CSV file?</p>
+
+                            <div class="d-grid gap-3">
+                                <!-- Download Now Option -->
+                                <button
+                                    class="btn btn-lg btn-primary text-start"
+                                    @click="exportDownloadNow"
+                                    :disabled="exporting">
+                                    <div class="d-flex align-items-start">
+                                        <i class="bi bi-download fs-3 me-3"></i>
+                                        <div>
+                                            <div class="fw-bold">Download Now</div>
+                                            <small class="text-white-50">
+                                                Instantly download the CSV file to your device
+                                            </small>
+                                        </div>
+                                    </div>
+                                </button>
+
+                                <!-- Email Option -->
+                                <button
+                                    class="btn btn-lg btn-outline-primary text-start"
+                                    @click="exportViaEmail"
+                                    :disabled="exporting">
+                                    <div class="d-flex align-items-start">
+                                        <i class="bi bi-envelope fs-3 me-3"></i>
+                                        <div>
+                                            <div class="fw-bold">Send to Email</div>
+                                            <small class="text-muted">
+                                                Receive a download link via email notification
+                                            </small>
+                                        </div>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -120,7 +165,8 @@ const PatientTreatments = {
             exportStatus: null,
             exportStatusType: 'info',
             downloadUrl: null,
-            exportTaskId: null
+            exportTaskId: null,
+            showExportModal: false
         };
     },
 
@@ -153,9 +199,10 @@ const PatientTreatments = {
             this.loading = false;
         },
 
-        async exportToCSV() {
+        async exportDownloadNow() {
+            this.showExportModal = false;
             this.exporting = true;
-            this.exportStatus = 'Starting export...';
+            this.exportStatus = 'Generating CSV file...';
             this.exportStatusType = 'info';
             this.downloadUrl = null;
 
@@ -163,23 +210,59 @@ const PatientTreatments = {
                 const response = await patientService.downloadExportDirect();
 
                 if (response.blob) {
-                    // Synchronous download (fallback when Celery not available)
-                    const url = window.URL.createObjectURL(response.blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `treatment_history_${new Date().toISOString().split('T')[0]}.csv`;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
+                    // Open CSV in new tab for viewing/saving (like PDF receipts)
+                    const blob = response.blob;
+                    const url = window.URL.createObjectURL(blob);
+                    const printWindow = window.open(url, '_blank');
 
-                    this.exportStatus = 'Export downloaded successfully!';
+                    // Fallback: If popup blocked, download directly
+                    if (!printWindow) {
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `treatment_history_${new Date().toISOString().split('T')[0]}.csv`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    }
+
+                    this.exportStatus = 'CSV file opened in new tab!';
                     this.exportStatusType = 'success';
-                } else if (response.task_id) {
+
+                    // Clear success message after 5 seconds
+                    setTimeout(() => {
+                        this.exportStatus = null;
+                    }, 5000);
+                } else {
+                    this.exportStatus = response.message || 'Export failed';
+                    this.exportStatusType = 'danger';
+                }
+            } catch (error) {
+                this.exportStatus = 'Export failed: ' + error.message;
+                this.exportStatusType = 'danger';
+            } finally {
+                this.exporting = false;
+            }
+        },
+
+        async exportViaEmail() {
+            this.showExportModal = false;
+            this.exporting = true;
+            this.exportStatus = 'Starting export...';
+            this.exportStatusType = 'info';
+            this.downloadUrl = null;
+
+            try {
+                const response = await patientService.exportViaEmail();
+
+                if (response.task_id) {
                     // Async export started
                     this.exportTaskId = response.task_id;
-                    this.exportStatus = 'Export started. Processing...';
+                    this.exportStatus = 'Export started. You will receive an email notification when ready.';
                     this.pollExportStatus();
+                } else if (response.success) {
+                    this.exportStatus = response.message || 'Export completed!';
+                    this.exportStatusType = 'success';
                 } else {
                     this.exportStatus = response.message || 'Export failed';
                     this.exportStatusType = 'danger';

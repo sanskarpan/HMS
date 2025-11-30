@@ -81,8 +81,8 @@ const patientService = {
     },
 
     // CSV Export
-    async triggerExport() {
-        return await api.post('/patient/export-history', {});
+    async triggerExport(mode = 'email') {
+        return await api.post('/patient/export-history', { mode });
     },
 
     async getExportStatus(taskId) {
@@ -90,26 +90,55 @@ const patientService = {
     },
 
     getExportDownloadUrl(fileId) {
-        return `${api.baseURL}/patient/download-export/${fileId}`;
+        return `/api/patient/download-export/${fileId}`;
     },
 
     async downloadExportDirect() {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${api.baseURL}/patient/export-history`, {
+        const token = localStorage.getItem('access_token');
+        const response = await fetch('/api/patient/export-history', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
-            }
+            },
+            body: JSON.stringify({ mode: 'download' })
         });
 
-        if (response.headers.get('content-type')?.includes('text/csv')) {
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Export failed');
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('text/csv')) {
             const blob = await response.blob();
             return { success: true, blob };
         } else {
             return await response.json();
         }
+    },
+
+    async exportViaEmail() {
+        return await api.post('/patient/export-history', { mode: 'email' });
+    },
+
+    // Payments
+    async getPendingPayments() {
+        return await api.get('/payment/pending');
+    },
+
+    async getPaymentHistory() {
+        return await api.get('/payment/history');
+    },
+
+    async initiatePayment(appointmentId) {
+        return await api.post('/payment/initiate', { appointment_id: appointmentId });
+    },
+
+    async processPayment(paymentData) {
+        return await api.post('/payment/process', paymentData);
     }
 };
 
 window.patientService = patientService;
+window.PatientService = patientService;

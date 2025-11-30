@@ -130,12 +130,12 @@ const AppointmentManagement = {
                                         <small class="text-muted">{{ apt.appointment_time }}</small>
                                     </td>
                                     <td>
-                                        <strong>{{ apt.patient?.full_name || 'N/A' }}</strong>
+                                        <strong>{{ (apt.patient && apt.patient.full_name) || 'N/A' }}</strong>
                                         <br>
-                                        <small class="text-muted">{{ apt.patient?.phone || '' }}</small>
+                                        <small class="text-muted">{{ (apt.patient && apt.patient.phone) || '' }}</small>
                                     </td>
-                                    <td>Dr. {{ apt.doctor?.full_name || 'N/A' }}</td>
-                                    <td>{{ apt.department_name || apt.doctor?.department || 'N/A' }}</td>
+                                    <td>Dr. {{ (apt.doctor && apt.doctor.full_name) || 'N/A' }}</td>
+                                    <td>{{ apt.department_name || ((apt.doctor && apt.doctor.department) || 'N/A') }}</td>
                                     <td>
                                         <span class="badge" :class="getStatusClass(apt.status)">
                                             {{ apt.status.charAt(0).toUpperCase() + apt.status.slice(1) }}
@@ -173,7 +173,7 @@ const AppointmentManagement = {
                 <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Appointment Details #{{ selectedAppointment?.id }}</h5>
+                            <h5 class="modal-title">Appointment Details #{{ selectedAppointment && selectedAppointment.id ? selectedAppointment.id : '' }}</h5>
                             <button type="button" class="btn-close" @click="showViewModal = false"></button>
                         </div>
                         <div class="modal-body" v-if="selectedAppointment">
@@ -212,15 +212,15 @@ const AppointmentManagement = {
                                     <table class="table table-sm">
                                         <tr>
                                             <th>Patient:</th>
-                                            <td>{{ selectedAppointment.patient?.full_name }}</td>
+                                            <td>{{ (selectedAppointment.patient && selectedAppointment.patient.full_name) || 'N/A' }}</td>
                                         </tr>
                                         <tr>
                                             <th>Patient Phone:</th>
-                                            <td>{{ selectedAppointment.patient?.phone }}</td>
+                                            <td>{{ (selectedAppointment.patient && selectedAppointment.patient.phone) || 'N/A' }}</td>
                                         </tr>
                                         <tr>
                                             <th>Doctor:</th>
-                                            <td>Dr. {{ selectedAppointment.doctor?.full_name }}</td>
+                                            <td>Dr. {{ (selectedAppointment.doctor && selectedAppointment.doctor.full_name) || 'N/A' }}</td>
                                         </tr>
                                         <tr>
                                             <th>Department:</th>
@@ -263,7 +263,7 @@ const AppointmentManagement = {
                             <button type="button" class="btn btn-secondary" @click="showViewModal = false">
                                 Close
                             </button>
-                            <button v-if="selectedAppointment?.status === 'booked'"
+                            <button v-if="selectedAppointment && selectedAppointment.status === 'booked'"
                                     type="button" class="btn btn-danger"
                                     @click="cancelAppointment(selectedAppointment); showViewModal = false">
                                 Cancel Appointment

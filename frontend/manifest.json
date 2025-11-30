@@ -1,7 +1,7 @@
 {
     "name": "Hospital Management System",
     "short_name": "HMS",
-    "description": "A comprehensive hospital management system for managing appointments, patients, and doctors.",
+    "description": "Hospital management system for appointments, patients, and doctors.",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#f5f7fa",

@@ -73,7 +73,7 @@ const DoctorSearch = {
                                 <p class="text-muted small mb-2">{{ doctor.qualification || 'Medical Specialist' }}</p>
                                 <div class="d-flex justify-content-between text-muted small mb-3">
                                     <span><i class="bi bi-clock"></i> {{ doctor.experience_years || 0 }} yrs exp</span>
-                                    <span><i class="bi bi-currency-dollar"></i> ${{ doctor.consultation_fee || 'N/A' }}</span>
+                                    <span><i class="bi bi-currency-dollar"></i> \${{ doctor.consultation_fee || 'N/A' }}</span>
                                 </div>
                             </div>
                             <div class="card-footer bg-transparent">

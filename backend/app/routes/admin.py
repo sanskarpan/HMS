@@ -660,3 +660,255 @@ def update_department(dept_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@admin_bp.route('/charts/appointments-trend', methods=['GET'])
+@admin_required
+def get_appointments_trend():
+    """Get appointment counts over last 30 days for line chart."""
+    from datetime import timedelta
+    from sqlalchemy import func
+
+    days = request.args.get('days', 30, type=int)
+    end_date = date.today()
+    start_date = end_date - timedelta(days=days)
+
+    results = db.session.query(
+        Appointment.appointment_date,
+        func.count(Appointment.id)
+    ).filter(
+        Appointment.appointment_date >= start_date,
+        Appointment.appointment_date <= end_date
+    ).group_by(
+        Appointment.appointment_date
+    ).order_by(
+        Appointment.appointment_date
+    ).all()
+
+    date_counts = {r[0]: r[1] for r in results}
+
+    labels = []
+    data = []
+    current = start_date
+    while current <= end_date:
+        labels.append(current.strftime('%Y-%m-%d'))
+        data.append(date_counts.get(current, 0))
+        current += timedelta(days=1)
+
+    return jsonify({
+        'success': True,
+        'chart_data': {
+            'labels': labels,
+            'datasets': [{
+                'label': 'Appointments',
+                'data': data
+            }]
+        }
+    }), 200
+
+
+@admin_bp.route('/charts/appointments-by-department', methods=['GET'])
+@admin_required
+def get_appointments_by_department():
+    """Get appointment distribution by department for pie chart."""
+    from sqlalchemy import func
+
+    results = db.session.query(
+        Department.name,
+        func.count(Appointment.id)
+    ).join(
+        Appointment, Department.id == Appointment.department_id
+    ).group_by(
+        Department.id, Department.name
+    ).all()
+
+    labels = [r[0] for r in results]
+    data = [r[1] for r in results]
+
+    colors = [
+        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+        '#9966FF', '#FF9F40', '#E7E9ED', '#7CFC00'
+    ]
+
+    return jsonify({
+        'success': True,
+        'chart_data': {
+            'labels': labels,
+            'datasets': [{
+                'data': data,
+                'backgroundColor': colors[:len(data)]
+            }]
+        }
+    }), 200
+
+
+@admin_bp.route('/charts/appointments-by-status', methods=['GET'])
+@admin_required
+def get_appointments_by_status():
+    """Get appointment distribution by status for doughnut chart."""
+    from sqlalchemy import func
+
+    results = db.session.query(
+        Appointment.status,
+        func.count(Appointment.id)
+    ).group_by(
+        Appointment.status
+    ).all()
+
+    labels = [r[0].title() for r in results]
+    data = [r[1] for r in results]
+
+    status_colors = {
+        'Booked': '#36A2EB',
+        'Completed': '#4BC0C0',
+        'Cancelled': '#FF6384',
+        'No_show': '#FFCE56'
+    }
+
+    colors = [status_colors.get(label, '#9966FF') for label in labels]
+
+    return jsonify({
+        'success': True,
+        'chart_data': {
+            'labels': labels,
+            'datasets': [{
+                'data': data,
+                'backgroundColor': colors
+            }]
+        }
+    }), 200
+
+
+@admin_bp.route('/charts/doctor-workload', methods=['GET'])
+@admin_required
+def get_doctor_workload():
+    """Get appointment counts per doctor for bar chart."""
+    from sqlalchemy import func
+    from datetime import timedelta
+
+    days = request.args.get('days', 30, type=int)
+    start_date = date.today() - timedelta(days=days)
+
+    results = db.session.query(
+        Doctor.full_name,
+        func.count(Appointment.id)
+    ).join(
+        Appointment, Doctor.id == Appointment.doctor_id
+    ).filter(
+        Appointment.appointment_date >= start_date
+    ).group_by(
+        Doctor.id, Doctor.full_name
+    ).order_by(
+        func.count(Appointment.id).desc()
+    ).limit(10).all()
+
+    labels = [r[0] for r in results]
+    data = [r[1] for r in results]
+
+    return jsonify({
+        'success': True,
+        'chart_data': {
+            'labels': labels,
+            'datasets': [{
+                'label': 'Appointments',
+                'data': data,
+                'backgroundColor': '#36A2EB'
+            }]
+        }
+    }), 200
+
+
+@admin_bp.route('/charts/patient-registrations', methods=['GET'])
+@admin_required
+def get_patient_registrations():
+    """Get new patient registrations over time for area chart."""
+    from datetime import timedelta
+    from sqlalchemy import func
+
+    days = request.args.get('days', 30, type=int)
+    end_date = date.today()
+    start_date = end_date - timedelta(days=days)
+
+    results = db.session.query(
+        func.date(Patient.created_at),
+        func.count(Patient.id)
+    ).filter(
+        Patient.created_at >= start_date
+    ).group_by(
+        func.date(Patient.created_at)
+    ).order_by(
+        func.date(Patient.created_at)
+    ).all()
+
+    date_counts = {r[0]: r[1] for r in results}
+
+    labels = []
+    data = []
+    current = start_date
+    while current <= end_date:
+        labels.append(current.strftime('%Y-%m-%d'))
+        data.append(date_counts.get(current, 0))
+        current += timedelta(days=1)
+
+    return jsonify({
+        'success': True,
+        'chart_data': {
+            'labels': labels,
+            'datasets': [{
+                'label': 'New Patients',
+                'data': data,
+                'fill': True,
+                'backgroundColor': 'rgba(75, 192, 192, 0.2)',
+                'borderColor': 'rgba(75, 192, 192, 1)'
+            }]
+        }
+    }), 200
+
+
+@admin_bp.route('/charts/revenue', methods=['GET'])
+@admin_required
+def get_revenue_chart():
+    """Get revenue data over time for chart."""
+    from datetime import timedelta
+    from sqlalchemy import func
+    from backend.app.models import Payment
+
+    days = request.args.get('days', 30, type=int)
+    end_date = date.today()
+    start_date = end_date - timedelta(days=days)
+
+    results = db.session.query(
+        func.date(Payment.paid_at),
+        func.sum(Payment.amount)
+    ).filter(
+        Payment.status == 'completed',
+        Payment.paid_at >= start_date
+    ).group_by(
+        func.date(Payment.paid_at)
+    ).order_by(
+        func.date(Payment.paid_at)
+    ).all()
+
+    date_revenue = {r[0]: float(r[1]) if r[1] else 0 for r in results}
+
+    labels = []
+    data = []
+    current = start_date
+    while current <= end_date:
+        labels.append(current.strftime('%Y-%m-%d'))
+        data.append(date_revenue.get(current, 0))
+        current += timedelta(days=1)
+
+    return jsonify({
+        'success': True,
+        'chart_data': {
+            'labels': labels,
+            'datasets': [{
+                'label': 'Revenue ($)',
+                'data': data,
+                'borderColor': '#4BC0C0',
+                'backgroundColor': 'rgba(75, 192, 192, 0.2)',
+                'fill': True
+            }]
+        }
+    }), 200

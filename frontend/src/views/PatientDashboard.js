@@ -29,7 +29,7 @@ const PatientDashboard = {
             <div v-else>
                 <!-- Stats Cards -->
                 <div class="row g-4 mb-4">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="card bg-primary text-white h-100">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center">
@@ -47,7 +47,7 @@ const PatientDashboard = {
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="card bg-success text-white h-100">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center">
@@ -65,7 +65,7 @@ const PatientDashboard = {
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="card bg-info text-white h-100">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center">
@@ -79,6 +79,24 @@ const PatientDashboard = {
                             <div class="card-footer bg-transparent border-0">
                                 <router-link to="/patient/treatments" class="text-white text-decoration-none small">
                                     View Records <i class="bi bi-arrow-right"></i>
+                                </router-link>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-dark h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-subtitle mb-1 text-dark-50">Payments</h6>
+                                        <h2 class="mb-0"><i class="bi bi-credit-card"></i></h2>
+                                    </div>
+                                    <i class="bi bi-wallet2 display-4 opacity-50"></i>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-transparent border-0">
+                                <router-link to="/patient/payments" class="text-dark text-decoration-none small">
+                                    Manage Payments <i class="bi bi-arrow-right"></i>
                                 </router-link>
                             </div>
                         </div>
