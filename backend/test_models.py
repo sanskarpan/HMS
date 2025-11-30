@@ -329,14 +329,26 @@ def test_appointment_model(doctor, patient):
     tomorrow = date.today() + timedelta(days=1)
     apt_time = time(10, 30)  # Different time to avoid conflict
 
-    # Create appointment
+    # Create appointment - look for a booked one first, or create new
     appointment = Appointment.query.filter_by(
         doctor_id=doctor.id,
         appointment_date=tomorrow,
-        appointment_time=apt_time
+        appointment_time=apt_time,
+        status='booked'
     ).first()
 
     if not appointment:
+        # Check if there's a completed/cancelled one and we need a new slot
+        existing = Appointment.query.filter_by(
+            doctor_id=doctor.id,
+            appointment_date=tomorrow,
+            appointment_time=apt_time
+        ).first()
+
+        if existing:
+            # Use a different time slot to avoid unique constraint
+            apt_time = time(11, 0)
+
         appointment = Appointment(
             patient_id=patient.id,
             doctor_id=doctor.id,
