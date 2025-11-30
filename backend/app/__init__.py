@@ -3,7 +3,7 @@ Hospital Management System Flask Application Factory.
 """
 import os
 import logging
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 
@@ -67,20 +67,63 @@ def create_app(config_class=None):
         """Serve the main index.html"""
         return send_from_directory(frontend_dir, 'index.html')
 
+    @app.route('/manifest.json')
+    def serve_manifest():
+        """Serve PWA manifest"""
+        return send_from_directory(frontend_dir, 'manifest.json', mimetype='application/json')
+
+    @app.route('/sw.js')
+    def serve_sw():
+        """Serve service worker"""
+        return send_from_directory(frontend_dir, 'sw.js', mimetype='application/javascript')
+
+    @app.route('/offline.html')
+    def serve_offline():
+        """Serve offline page"""
+        return send_from_directory(frontend_dir, 'offline.html')
+
     @app.route('/src/<path:filename>')
     def serve_src(filename):
         """Serve JavaScript source files from frontend/src/"""
-        return send_from_directory(os.path.join(frontend_dir, 'src'), filename)
+        src_dir = os.path.join(frontend_dir, 'src')
+        return send_from_directory(src_dir, filename, mimetype='application/javascript')
 
     @app.route('/<path:path>')
     def serve_frontend(path):
-        """Serve frontend routes - always return index.html for SPA routing"""
+        """Serve frontend routes - check for actual files first, then SPA routing"""
         # Don't handle API routes here
         if path.startswith('api/'):
             return {'error': 'Not found'}, 404
 
+        # Check if it's an actual file in frontend directory
+        file_path = os.path.join(frontend_dir, path)
+        if os.path.isfile(file_path):
+            # Determine mimetype based on extension
+            if path.endswith('.js'):
+                return send_from_directory(frontend_dir, path, mimetype='application/javascript')
+            elif path.endswith('.css'):
+                return send_from_directory(frontend_dir, path, mimetype='text/css')
+            elif path.endswith('.json'):
+                return send_from_directory(frontend_dir, path, mimetype='application/json')
+            elif path.endswith('.png'):
+                return send_from_directory(frontend_dir, path, mimetype='image/png')
+            elif path.endswith('.ico'):
+                return send_from_directory(frontend_dir, path, mimetype='image/x-icon')
+            else:
+                return send_from_directory(frontend_dir, path)
+
         # For all other paths, serve index.html (Vue Router handles routing)
         return send_from_directory(frontend_dir, 'index.html')
+
+    # Add cache-control headers to prevent browser caching during development
+    @app.after_request
+    def add_cache_headers(response):
+        """Add headers to prevent browser caching for static files"""
+        if request.path.startswith('/src/') or request.path.endswith('.js') or request.path.endswith('.json'):
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '-1'
+        return response
 
     # Create database tables
     with app.app_context():
