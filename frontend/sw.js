@@ -3,7 +3,7 @@
  * Provides offline support and caching strategies
  */
 
-const CACHE_NAME = 'hms-cache-v1';
+const CACHE_NAME = 'hms-cache-v3';
 const OFFLINE_URL = '/offline.html';
 
 // Resources to pre-cache
@@ -94,6 +94,10 @@ self.addEventListener('fetch', (event) => {
 
     // Cache-first strategy for static assets
     if (event.request.url.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2)$/)) {
+        // Skip caching for chrome-extension and other unsupported schemes
+        if (!event.request.url.startsWith('http')) {
+            return;
+        }
         event.respondWith(
             caches.match(event.request)
                 .then((cachedResponse) => {

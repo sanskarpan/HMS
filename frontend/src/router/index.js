@@ -48,6 +48,18 @@ const routes = [
         meta: { requiresAuth: true, role: 'admin' }
     },
     {
+        path: '/admin/charts',
+        name: 'AdminCharts',
+        component: AdminCharts,
+        meta: { requiresAuth: true, role: 'admin' }
+    },
+    {
+        path: '/admin/payments',
+        name: 'AdminPayments',
+        component: AdminPayments,
+        meta: { requiresAuth: true, role: 'admin' }
+    },
+    {
         path: '/doctor/dashboard',
         name: 'DoctorDashboard',
         component: DoctorDashboard,
@@ -75,6 +87,12 @@ const routes = [
         path: '/doctor/profile',
         name: 'DoctorProfile',
         component: DoctorProfile,
+        meta: { requiresAuth: true, role: 'doctor' }
+    },
+    {
+        path: '/doctor/charts',
+        name: 'DoctorCharts',
+        component: DoctorCharts,
         meta: { requiresAuth: true, role: 'doctor' }
     },
     {
@@ -129,6 +147,12 @@ const routes = [
         path: '/patient/profile',
         name: 'PatientProfile',
         component: PatientProfile,
+        meta: { requiresAuth: true, role: 'patient' }
+    },
+    {
+        path: '/patient/payments',
+        name: 'PatientPayments',
+        component: PatientPayments,
         meta: { requiresAuth: true, role: 'patient' }
     },
     {

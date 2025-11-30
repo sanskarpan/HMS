@@ -112,7 +112,35 @@ const adminService = {
 
     async updateDepartment(departmentId, departmentData) {
         return await api.put(`/admin/departments/${departmentId}`, departmentData);
+    },
+
+    // Charts
+    async getChartData(chartType, params = {}) {
+        const queryParams = new URLSearchParams();
+        if (params.days) queryParams.append('days', params.days);
+        const query = queryParams.toString();
+        return await api.get(`/admin/charts/${chartType}${query ? '?' + query : ''}`);
+    },
+
+    // Payments
+    async getAllPayments(params = {}) {
+        const queryParams = new URLSearchParams();
+        if (params.status) queryParams.append('status', params.status);
+        if (params.patient_id) queryParams.append('patient_id', params.patient_id);
+        if (params.date_from) queryParams.append('date_from', params.date_from);
+        if (params.date_to) queryParams.append('date_to', params.date_to);
+        const query = queryParams.toString();
+        return await api.get(`/payment/admin/all${query ? '?' + query : ''}`);
+    },
+
+    async refundPayment(paymentId, reason = '') {
+        return await api.post(`/payment/admin/${paymentId}/refund`, { reason });
+    },
+
+    async getPaymentStats() {
+        return await api.get('/payment/admin/stats');
     }
 };
 
 window.adminService = adminService;
+window.AdminService = adminService;
