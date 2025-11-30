@@ -2,7 +2,9 @@
 Patient API routes for the Hospital Management System.
 Handles patient dashboard, profile, doctor search, appointment booking, and treatment history.
 """
-from flask import Blueprint, request, jsonify
+import hashlib
+import json
+from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime, date, timedelta, time
 
 from backend.app.models import (
@@ -13,6 +15,7 @@ from backend.app.utils import (
     patient_required,
     get_current_user_from_request
 )
+from backend.app.services.cache_service import cache, CacheService
 
 patient_bp = Blueprint('patient', __name__)
 
@@ -136,7 +139,12 @@ def update_profile():
 @patient_bp.route('/departments', methods=['GET'])
 @patient_required
 def get_departments():
-    """Get all departments/specializations."""
+    """Get all departments/specializations. Cached for 30 minutes."""
+    cache_key = 'dept:list:all'
+    cached_result = cache.get(cache_key)
+    if cached_result:
+        return cached_result
+
     departments = Department.query.order_by(Department.name).all()
 
     result = []
@@ -149,23 +157,31 @@ def get_departments():
             'doctor_count': doctor_count
         })
 
-    return jsonify({
+    response = jsonify({
         'success': True,
         'departments': result
     }), 200
+
+    cache.set(cache_key, response, timeout=current_app.config.get('CACHE_TTL_STATIC', 1800))
+    return response
 
 
 @patient_bp.route('/departments/<int:department_id>', methods=['GET'])
 @patient_required
 def get_department_details(department_id):
-    """Get department details with list of doctors."""
+    """Get department details with list of doctors. Cached for 30 minutes."""
+    cache_key = f'dept:{department_id}:details'
+    cached_result = cache.get(cache_key)
+    if cached_result:
+        return cached_result
+
     department = Department.query.get(department_id)
     if not department:
         return jsonify({'success': False, 'message': 'Department not found'}), 404
 
     doctors = Doctor.query.filter_by(department_id=department_id, is_active=True).all()
 
-    return jsonify({
+    response = jsonify({
         'success': True,
         'department': {
             'id': department.id,
@@ -175,13 +191,25 @@ def get_department_details(department_id):
         'doctors': [doc.to_dict() for doc in doctors]
     }), 200
 
+    cache.set(cache_key, response, timeout=current_app.config.get('CACHE_TTL_STATIC', 1800))
+    return response
+
 
 @patient_bp.route('/doctors', methods=['GET'])
 @patient_required
 def search_doctors():
-    """Search for doctors by name or filter by department."""
+    """Search for doctors by name or filter by department. Cached for 5 minutes."""
     search = request.args.get('search', '').strip()
     department_id = request.args.get('department_id', type=int)
+
+    # Create cache key based on search parameters
+    params = {'search': search, 'department_id': department_id}
+    params_hash = hashlib.md5(json.dumps(params, sort_keys=True).encode()).hexdigest()[:12]
+    cache_key = f'search:doc:{params_hash}'
+
+    cached_result = cache.get(cache_key)
+    if cached_result:
+        return cached_result
 
     query = Doctor.query.filter_by(is_active=True)
 
@@ -197,26 +225,43 @@ def search_doctors():
 
     doctors = query.order_by(Doctor.full_name).all()
 
-    return jsonify({
+    response = jsonify({
         'success': True,
         'doctors': [doc.to_dict(include_department=True) for doc in doctors]
     }), 200
+
+    cache.set(cache_key, response, timeout=current_app.config.get('CACHE_TTL_SEARCH', 300))
+    return response
 
 
 @patient_bp.route('/doctors/<int:doctor_id>', methods=['GET'])
 @patient_required
 def get_doctor_details(doctor_id):
-    """Get doctor details with availability."""
+    """Get doctor details with availability. Availability cached for 5 minutes."""
     doctor = Doctor.query.filter_by(id=doctor_id, is_active=True).first()
     if not doctor:
         return jsonify({'success': False, 'message': 'Doctor not found'}), 404
 
-    # Get 7-day availability
+    # Cache doctor info separately (10 minutes)
+    doc_cache_key = f'doc:{doctor_id}:info'
+    doctor_info = cache.get(doc_cache_key)
+    if not doctor_info:
+        doctor_info = doctor.to_dict(include_department=True, include_user=True)
+        cache.set(doc_cache_key, doctor_info, timeout=current_app.config.get('CACHE_TTL_SEMI_STATIC', 600))
+
+    # Get 7-day availability (dynamic - cached per date)
     today = date.today()
     availability = []
 
     for i in range(7):
         current_date = today + timedelta(days=i)
+        avail_cache_key = f'avail:{doctor_id}:{current_date.isoformat()}'
+        cached_avail = cache.get(avail_cache_key)
+
+        if cached_avail:
+            availability.append(cached_avail)
+            continue
+
         avail = DoctorAvailability.get_for_doctor_and_date(doctor_id, current_date)
 
         # Get booked slots
@@ -227,27 +272,31 @@ def get_doctor_details(doctor_id):
             all_slots = avail.all_slots
             available_slots = [s.strftime('%H:%M') for s in all_slots if s not in booked_slots]
 
-            availability.append({
+            day_avail = {
                 'date': current_date.isoformat(),
                 'day_name': current_date.strftime('%A'),
                 'is_available': True,
                 'morning_slots': [s.strftime('%H:%M') for s in avail.morning_slots if s not in booked_slots],
                 'evening_slots': [s.strftime('%H:%M') for s in avail.evening_slots if s not in booked_slots],
                 'booked_slots': booked_times
-            })
+            }
         else:
-            availability.append({
+            day_avail = {
                 'date': current_date.isoformat(),
                 'day_name': current_date.strftime('%A'),
                 'is_available': False,
                 'morning_slots': [],
                 'evening_slots': [],
                 'booked_slots': booked_times
-            })
+            }
+
+        # Cache availability for 5 minutes (dynamic data)
+        cache.set(avail_cache_key, day_avail, timeout=current_app.config.get('CACHE_TTL_DYNAMIC', 300))
+        availability.append(day_avail)
 
     return jsonify({
         'success': True,
-        'doctor': doctor.to_dict(include_department=True, include_user=True),
+        'doctor': doctor_info,
         'availability': availability
     }), 200
 
@@ -255,7 +304,7 @@ def get_doctor_details(doctor_id):
 @patient_bp.route('/doctors/<int:doctor_id>/slots', methods=['GET'])
 @patient_required
 def get_doctor_slots(doctor_id):
-    """Get available slots for a specific date."""
+    """Get available slots for a specific date. Cached for 5 minutes."""
     doctor = Doctor.query.filter_by(id=doctor_id, is_active=True).first()
     if not doctor:
         return jsonify({'success': False, 'message': 'Doctor not found'}), 404
@@ -272,24 +321,35 @@ def get_doctor_slots(doctor_id):
     if slot_date < date.today():
         return jsonify({'success': False, 'message': 'Cannot book past dates'}), 400
 
+    # Check cache for slots
+    cache_key = f'slots:{doctor_id}:{slot_date.isoformat()}'
+    cached_result = cache.get(cache_key)
+    if cached_result:
+        return cached_result
+
     avail = DoctorAvailability.get_for_doctor_and_date(doctor_id, slot_date)
     booked_slots = Appointment.get_booked_slots(doctor_id, slot_date)
 
     if not avail or not avail.is_available:
-        return jsonify({
+        response = jsonify({
             'success': True,
             'available': False,
             'slots': []
         }), 200
+        cache.set(cache_key, response, timeout=current_app.config.get('CACHE_TTL_DYNAMIC', 300))
+        return response
 
     available_slots = avail.get_available_slots(booked_slots)
 
-    return jsonify({
+    response = jsonify({
         'success': True,
         'available': True,
         'date': slot_date.isoformat(),
         'slots': [s.strftime('%H:%M') for s in available_slots]
     }), 200
+
+    cache.set(cache_key, response, timeout=current_app.config.get('CACHE_TTL_DYNAMIC', 300))
+    return response
 
 
 # =============================================================================
@@ -440,6 +500,13 @@ def book_appointment():
 
         db.session.commit()
 
+        # Invalidate relevant caches after booking
+        CacheService.invalidate_availability_cache(doctor_id, appointment_date.isoformat())
+        cache.delete(f'slots:{doctor_id}:{appointment_date.isoformat()}')
+        cache.delete(f'avail:{doctor_id}:{appointment_date.isoformat()}')
+        CacheService.invalidate_dashboard_cache('patient', patient.id)
+        CacheService.invalidate_dashboard_cache('doctor', doctor_id)
+
         return jsonify({
             'success': True,
             'message': 'Appointment booked successfully',
@@ -515,6 +582,14 @@ def cancel_appointment(appointment_id):
 
         appointment.cancel(cancelled_by='patient', reason=reason)
         db.session.commit()
+
+        # Invalidate relevant caches after cancellation
+        apt_date = appointment.appointment_date.isoformat()
+        CacheService.invalidate_availability_cache(appointment.doctor_id, apt_date)
+        cache.delete(f'slots:{appointment.doctor_id}:{apt_date}')
+        cache.delete(f'avail:{appointment.doctor_id}:{apt_date}')
+        CacheService.invalidate_dashboard_cache('patient', patient.id)
+        CacheService.invalidate_dashboard_cache('doctor', appointment.doctor_id)
 
         return jsonify({
             'success': True,

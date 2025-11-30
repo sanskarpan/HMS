@@ -30,6 +30,19 @@ class Config:
     # Redis
     REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 
+    # Cache Config
+    CACHE_TYPE = os.getenv('CACHE_TYPE', 'RedisCache')
+    CACHE_REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+    CACHE_DEFAULT_TIMEOUT = 300  
+    CACHE_KEY_PREFIX = 'hms_cache_'
+
+    # Cache TTL Values 
+    CACHE_TTL_STATIC = 1800      
+    CACHE_TTL_SEMI_STATIC = 600 
+    CACHE_TTL_DYNAMIC = 300      
+    CACHE_TTL_REALTIME = 120    
+    CACHE_TTL_SEARCH = 300      
+
     # Celery
     CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
     CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://localhost:6379/0')

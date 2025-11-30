@@ -2,13 +2,16 @@
 Hospital Management System Flask Application Factory.
 """
 import os
+import logging
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 
 from .models import db
+from .services.cache_service import cache
 from backend.config import get_config
 
+logger = logging.getLogger(__name__)
 
 # Initialize extensions
 jwt = JWTManager()
@@ -45,6 +48,14 @@ def create_app(config_class=None):
     db.init_app(app)
     jwt.init_app(app)
     CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+    try:
+        cache.init_app(app)
+        logger.info(f"Cache initialized with type: {app.config.get('CACHE_TYPE', 'SimpleCache')}")
+    except Exception as e:
+        logger.warning(f"Redis cache initialization failed, using SimpleCache: {e}")
+        app.config['CACHE_TYPE'] = 'SimpleCache'
+        cache.init_app(app)
 
     # Register API blueprints
     from .routes import register_blueprints
