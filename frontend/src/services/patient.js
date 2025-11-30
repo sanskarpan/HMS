@@ -81,6 +81,40 @@ const patientService = {
 
     async getTreatmentDetails(treatmentId) {
         return await api.get(`/patient/treatments/${treatmentId}`);
+    },
+
+    // CSV Export (Ticket 7.6, 7.7)
+    async triggerExport() {
+        return await api.post('/patient/export-history', {});
+    },
+
+    async getExportStatus(taskId) {
+        return await api.get(`/patient/export-status/${taskId}`);
+    },
+
+    getExportDownloadUrl(fileId) {
+        return `${api.baseURL}/patient/download-export/${fileId}`;
+    },
+
+    async downloadExportDirect() {
+        // For synchronous fallback download
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${api.baseURL}/patient/export-history`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.headers.get('content-type')?.includes('text/csv')) {
+            // Synchronous download - return the blob
+            const blob = await response.blob();
+            return { success: true, blob };
+        } else {
+            // Async task started
+            return await response.json();
+        }
     }
 };
 
