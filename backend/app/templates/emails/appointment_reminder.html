@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointment Reminder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #0d6efd;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background-color: #f8f9fa;
+            padding: 30px;
+            border: 1px solid #dee2e6;
+        }
+        .appointment-details {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #0d6efd;
+        }
+        .detail-row {
+            margin: 10px 0;
+        }
+        .label {
+            font-weight: bold;
+            color: #6c757d;
+        }
+        .value {
+            color: #333;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+            font-size: 12px;
+            border-top: 1px solid #dee2e6;
+        }
+        .reminder-note {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Appointment Reminder</h1>
+    </div>
+    <div class="content">
+        <p>Dear <strong>{{ patient_name }}</strong>,</p>
+        <p>This is a reminder for your upcoming appointment:</p>
+
+        <div class="appointment-details">
+            <div class="detail-row">
+                <span class="label">Doctor:</span>
+                <span class="value">Dr. {{ doctor_name }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Date:</span>
+                <span class="value">{{ appointment_date }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Time:</span>
+                <span class="value">{{ appointment_time }}</span>
+            </div>
+            {% if hospital_info %}
+            <div class="detail-row">
+                <span class="label">Location:</span>
+                <span class="value">{{ hospital_info.get('address', 'Main Hospital Building') }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="reminder-note">
+            <strong>Please Note:</strong> Arrive 15 minutes before your scheduled time for registration.
+        </div>
+    </div>
+    <div class="footer">
+        <p>Hospital Management System</p>
+        <p>This is an automated message. Please do not reply to this email.</p>
+    </div>
+</body>
+</html>
