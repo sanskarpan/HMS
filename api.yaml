@@ -783,11 +783,12 @@ paths:
               schema:
                 type: string
 
-  /reports/export/csv:
+  /patient/export-history:
     post:
       tags:
-        - Reports
-      summary: Export patient history as CSV
+        - Patient
+      summary: Export treatment history as CSV
+      description: Export patient treatment history with choice of immediate download or email notification
       security:
         - bearerAuth: []
       requestBody:
@@ -797,26 +798,39 @@ paths:
             schema:
               type: object
               properties:
-                patient_id:
-                  type: integer
+                mode:
+                  type: string
+                  enum: [download, email]
+                  default: email
+                  description: |
+                    - 'download': Immediate CSV download (synchronous)
+                    - 'email': Async export with email notification (requires Celery)
       responses:
+        '200':
+          description: CSV file (when mode=download)
+          content:
+            text/csv:
+              schema:
+                type: string
         '202':
-          description: Export job started
+          description: Export job started (when mode=email)
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  task_id:
-                    type: string
+                  success:
+                    type: boolean
                   message:
                     type: string
+                  task_id:
+                    type: string
 
-  /reports/export/status/{task_id}:
+  /patient/export-status/{task_id}:
     get:
       tags:
-        - Reports
-      summary: Check export status
+        - Patient
+      summary: Check CSV export status
       security:
         - bearerAuth: []
       parameters:
@@ -833,10 +847,45 @@ paths:
               schema:
                 type: object
                 properties:
+                  success:
+                    type: boolean
+                  task_id:
+                    type: string
                   status:
                     type: string
-                  result:
+                    enum: [pending, processing, completed, failed]
+                  progress:
+                    type: integer
+                  file_id:
                     type: string
+                  error:
+                    type: string
+
+  /patient/download-export/{file_id}:
+    get:
+      tags:
+        - Patient
+      summary: Download exported CSV file
+      description: Download CSV file by file ID (link expires after 24 hours)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: CSV file download
+          content:
+            text/csv:
+              schema:
+                type: string
+        '403':
+          description: Access denied (not your file)
+        '404':
+          description: File not found or expired
 
 components:
   securitySchemes:
