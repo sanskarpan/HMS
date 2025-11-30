@@ -91,8 +91,8 @@ const DoctorAppointments = {
                                         <span v-if="apt.is_today" class="badge bg-info ms-1">Today</span>
                                     </td>
                                     <td>{{ apt.appointment_time }}</td>
-                                    <td>{{ apt.patient?.full_name || 'N/A' }}</td>
-                                    <td>{{ apt.patient?.phone || 'N/A' }}</td>
+                                    <td>{{ (apt.patient && apt.patient.full_name) || 'N/A' }}</td>
+                                    <td>{{ (apt.patient && apt.patient.phone) || 'N/A' }}</td>
                                     <td>{{ apt.reason || '-' }}</td>
                                     <td>
                                         <span class="badge" :class="getStatusClass(apt.status)">
@@ -144,9 +144,9 @@ const DoctorAppointments = {
                         </div>
                         <div class="modal-body">
                             <div class="alert alert-info mb-3">
-                                <strong>Patient:</strong> {{ selectedAppointment?.patient?.full_name }}<br>
-                                <strong>Date:</strong> {{ formatDate(selectedAppointment?.appointment_date) }}
-                                at {{ selectedAppointment?.appointment_time }}
+                                <strong>Patient:</strong> {{ (selectedAppointment && selectedAppointment.patient && selectedAppointment.patient.full_name) || 'N/A' }}<br>
+                                <strong>Date:</strong> {{ formatDate(selectedAppointment && selectedAppointment.appointment_date ? selectedAppointment.appointment_date : '') }}
+                                at {{ (selectedAppointment && selectedAppointment.appointment_time) || '' }}
                             </div>
                             <form>
                                 <div class="mb-3">

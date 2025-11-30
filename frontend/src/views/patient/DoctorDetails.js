@@ -41,7 +41,7 @@ const DoctorDetails = {
                             <hr>
                             <div class="text-start">
                                 <p class="mb-2"><i class="bi bi-clock me-2"></i><strong>Experience:</strong> {{ doctor.experience_years || 0 }} years</p>
-                                <p class="mb-2"><i class="bi bi-currency-dollar me-2"></i><strong>Consultation Fee:</strong> ${{ doctor.consultation_fee || 'N/A' }}</p>
+                                <p class="mb-2"><i class="bi bi-currency-dollar me-2"></i><strong>Consultation Fee:</strong> \${{ doctor.consultation_fee || 'N/A' }}</p>
                                 <p class="mb-0"><i class="bi bi-telephone me-2"></i><strong>Phone:</strong> {{ doctor.phone || 'Not available' }}</p>
                             </div>
                             <hr>
@@ -123,7 +123,7 @@ const DoctorDetails = {
                                 <strong>Booking Summary:</strong><br>
                                 <i class="bi bi-person"></i> Dr. {{ doctor.full_name }}<br>
                                 <i class="bi bi-calendar"></i> {{ formatDateFull(selectedDate.date) }} at {{ selectedSlot }}<br>
-                                <i class="bi bi-currency-dollar"></i> Fee: ${{ doctor.consultation_fee || 'TBD' }}
+                                <i class="bi bi-currency-dollar"></i> Fee: \${{ doctor.consultation_fee || 'TBD' }}
                             </div>
 
                             <div v-if="bookingError" class="alert alert-danger">{{ bookingError }}</div>

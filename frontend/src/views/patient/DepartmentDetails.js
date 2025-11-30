@@ -46,7 +46,7 @@ const DepartmentDetails = {
                                 </div>
                                 <ul class="list-unstyled mb-3">
                                     <li><i class="bi bi-clock me-2 text-muted"></i>{{ doctor.experience_years || 0 }} years experience</li>
-                                    <li><i class="bi bi-currency-dollar me-2 text-muted"></i>Fee: ${{ doctor.consultation_fee || 'N/A' }}</li>
+                                    <li><i class="bi bi-currency-dollar me-2 text-muted"></i>Fee: \${{ doctor.consultation_fee || 'N/A' }}</li>
                                 </ul>
                                 <p class="text-muted small mb-3">{{ doctor.bio || 'Experienced medical professional' }}</p>
                             </div>
@@ -77,7 +77,7 @@ const DepartmentDetails = {
                             <!-- Doctor Info -->
                             <div class="alert alert-info">
                                 <strong>{{ selectedDoctor.qualification }}</strong> |
-                                Fee: ${{ selectedDoctor.consultation_fee }} |
+                                Fee: \${{ selectedDoctor.consultation_fee }} |
                                 {{ selectedDoctor.experience_years }} years experience
                             </div>
 

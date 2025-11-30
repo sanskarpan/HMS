@@ -94,15 +94,15 @@ const DoctorAvailability = {
                             </div>
 
                             <!-- Available Slots Preview -->
-                            <div v-if="day.morning_slots?.length || day.evening_slots?.length">
+                            <div v-if="(day.morning_slots && day.morning_slots.length) || (day.evening_slots && day.evening_slots.length)">
                                 <small class="text-muted">Available Slots:</small>
                                 <div class="d-flex flex-wrap gap-1 mt-1">
-                                    <span v-for="slot in day.morning_slots?.slice(0, 4)" :key="'m'+slot"
+                                    <span v-for="slot in (day.morning_slots && day.morning_slots.length ? day.morning_slots.slice(0, 4) : [])" :key="'m'+slot"
                                           class="badge bg-light text-dark">{{ slot }}</span>
-                                    <span v-for="slot in day.evening_slots?.slice(0, 4)" :key="'e'+slot"
+                                    <span v-for="slot in (day.evening_slots && day.evening_slots.length ? day.evening_slots.slice(0, 4) : [])" :key="'e'+slot"
                                           class="badge bg-light text-dark">{{ slot }}</span>
-                                    <span v-if="(day.morning_slots?.length || 0) + (day.evening_slots?.length || 0) > 8"
-                                          class="badge bg-secondary">+{{ (day.morning_slots?.length || 0) + (day.evening_slots?.length || 0) - 8 }} more</span>
+                                    <span v-if="((day.morning_slots && day.morning_slots.length) || 0) + ((day.evening_slots && day.evening_slots.length) || 0) > 8"
+                                          class="badge bg-secondary">+{{ ((day.morning_slots && day.morning_slots.length) || 0) + ((day.evening_slots && day.evening_slots.length) || 0) - 8 }} more</span>
                                 </div>
                             </div>
 

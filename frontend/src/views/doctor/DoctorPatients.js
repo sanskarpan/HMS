@@ -143,7 +143,7 @@ const DoctorPatients = {
                                                     {{ apt.status }}
                                                 </span>
                                             </td>
-                                            <td>{{ apt.treatment?.diagnosis || '-' }}</td>
+                                            <td>{{ (apt.treatment && apt.treatment.diagnosis) || '-' }}</td>
                                             <td>
                                                 <button v-if="apt.treatment" class="btn btn-sm btn-outline-info"
                                                         @click="viewTreatment(apt.treatment)">
@@ -151,7 +151,7 @@ const DoctorPatients = {
                                                 </button>
                                             </td>
                                         </tr>
-                                        <tr v-if="!selectedPatient.appointments?.length">
+                                        <tr v-if="!selectedPatient.appointments || !selectedPatient.appointments.length">
                                             <td colspan="5" class="text-center text-muted">No appointments</td>
                                         </tr>
                                     </tbody>
@@ -178,8 +178,8 @@ const DoctorPatients = {
                                         </thead>
                                         <tbody>
                                             <tr v-for="h in fullHistory" :key="h.id">
-                                                <td>{{ h.appointment?.date }}</td>
-                                                <td>{{ h.appointment?.doctor_name }}</td>
+                                                <td>{{ (h.appointment && h.appointment.date) || 'N/A' }}</td>
+                                                <td>{{ (h.appointment && h.appointment.doctor_name) || 'N/A' }}</td>
                                                 <td>{{ h.diagnosis }}</td>
                                                 <td>{{ h.prescription || '-' }}</td>
                                             </tr>

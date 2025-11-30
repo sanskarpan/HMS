@@ -131,8 +131,7 @@ const DoctorProfile = {
                                 <i class="bi bi-person-fill display-4 text-primary"></i>
                             </div>
                             <h5>Dr. {{ profile.full_name }}</h5>
-                            <p class="text-muted mb-1">{{ profile.specialization || 'Specialization not set' }}</p>
-                            <p class="text-muted small">{{ profile.department || 'Department not assigned' }}</p>
+                            <p class="text-muted mb-1">{{ profile.specialization || departmentName }}</p>
                             <hr>
                             <div class="text-start">
                                 <p class="mb-1"><i class="bi bi-envelope me-2"></i>{{ profile.email }}</p>
@@ -193,6 +192,15 @@ const DoctorProfile = {
 
     async created() {
         await this.loadProfile();
+    },
+
+    computed: {
+        departmentName() {
+            if (!this.profile.department) return 'Department not assigned';
+            if (typeof this.profile.department === 'string') return this.profile.department;
+            if (this.profile.department.name) return this.profile.department.name;
+            return 'Department not assigned';
+        }
     },
 
     methods: {
