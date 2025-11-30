@@ -665,6 +665,14 @@ def trigger_export():
     if not patient:
         return jsonify({'success': False, 'message': 'Patient profile not found'}), 404
 
+    data = request.get_json() or {}
+    mode = data.get('mode', 'email')  # Default to email for backward compatibility
+
+    # Immediate download mode
+    if mode == 'download':
+        return _sync_export(patient)
+
+    # Email notification mode (async with Celery)
     try:
         from backend.app.tasks.exports import export_patient_history_csv
 
@@ -672,10 +680,11 @@ def trigger_export():
 
         return jsonify({
             'success': True,
-            'message': 'Export started',
+            'message': 'Export started. You will receive an email when ready.',
             'task_id': task.id
         }), 202
     except Exception as e:
+        # Fallback to sync export if Celery is not available
         return _sync_export(patient)
 
 
