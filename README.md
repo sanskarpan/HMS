@@ -21,3 +21,6 @@ Hospitals need efficient systems to manage patients, doctors, appointments, and 
 
 ## Milestone 6: Appointment History and Conflict Prevention
 **Progress: 12%**
+
+## Milestone 7: Backend Jobs - Daily Reminders & Monthly Reports
+**Progress: 10%**
