@@ -79,7 +79,7 @@ DEFAULT_DEPARTMENTS = [
     },
     {
         'name': 'General Medicine',
-        'description': 'Provides comprehensive primary care for adults, treating a wide range of common illnesses and chronic conditions.'
+        'description': 'Primary care for adults, treating common illnesses and chronic conditions.'
     },
     {
         'name': 'Orthopedics',
