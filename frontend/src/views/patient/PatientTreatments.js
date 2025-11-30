@@ -19,9 +19,34 @@ const PatientTreatments = {
                             <li class="breadcrumb-item active">Treatment Records</li>
                         </ol>
                     </nav>
-                    <h2><i class="bi bi-file-medical"></i> Treatment Records</h2>
-                    <p class="text-muted">View all your treatment and diagnosis records</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2><i class="bi bi-file-medical"></i> Treatment Records</h2>
+                            <p class="text-muted mb-0">View all your treatment and diagnosis records</p>
+                        </div>
+                        <button
+                            class="btn btn-success"
+                            @click="exportToCSV"
+                            :disabled="exporting || treatments.length === 0">
+                            <span v-if="exporting">
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                Exporting...
+                            </span>
+                            <span v-else>
+                                <i class="bi bi-download me-1"></i> Export as CSV
+                            </span>
+                        </button>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Export Status Alert -->
+            <div v-if="exportStatus" class="alert" :class="exportStatusClass" role="alert">
+                <i class="bi" :class="exportStatusIcon"></i>
+                {{ exportStatus }}
+                <a v-if="downloadUrl" :href="downloadUrl" class="alert-link ms-2" download>
+                    Download Now
+                </a>
             </div>
 
             <!-- Loading -->
@@ -95,8 +120,28 @@ const PatientTreatments = {
     data() {
         return {
             treatments: [],
-            loading: true
+            loading: true,
+            exporting: false,
+            exportStatus: null,
+            exportStatusType: 'info',
+            downloadUrl: null,
+            exportTaskId: null
         };
+    },
+
+    computed: {
+        exportStatusClass() {
+            return `alert-${this.exportStatusType}`;
+        },
+        exportStatusIcon() {
+            const icons = {
+                'info': 'bi-info-circle',
+                'success': 'bi-check-circle',
+                'warning': 'bi-exclamation-triangle',
+                'danger': 'bi-x-circle'
+            };
+            return icons[this.exportStatusType] || 'bi-info-circle';
+        }
     },
 
     async created() {
@@ -111,6 +156,83 @@ const PatientTreatments = {
                 this.treatments = response.treatments;
             }
             this.loading = false;
+        },
+
+        async exportToCSV() {
+            this.exporting = true;
+            this.exportStatus = 'Starting export...';
+            this.exportStatusType = 'info';
+            this.downloadUrl = null;
+
+            try {
+                const response = await patientService.downloadExportDirect();
+
+                if (response.blob) {
+                    // Synchronous download (fallback when Celery not available)
+                    const url = window.URL.createObjectURL(response.blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `treatment_history_${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+
+                    this.exportStatus = 'Export downloaded successfully!';
+                    this.exportStatusType = 'success';
+                } else if (response.task_id) {
+                    // Async export started
+                    this.exportTaskId = response.task_id;
+                    this.exportStatus = 'Export started. Processing...';
+                    this.pollExportStatus();
+                } else {
+                    this.exportStatus = response.message || 'Export failed';
+                    this.exportStatusType = 'danger';
+                }
+            } catch (error) {
+                this.exportStatus = 'Export failed: ' + error.message;
+                this.exportStatusType = 'danger';
+            } finally {
+                this.exporting = false;
+            }
+        },
+
+        async pollExportStatus() {
+            if (!this.exportTaskId) return;
+
+            const maxAttempts = 30;
+            let attempts = 0;
+
+            const poll = async () => {
+                attempts++;
+                try {
+                    const status = await patientService.getExportStatus(this.exportTaskId);
+
+                    if (status.status === 'completed') {
+                        this.exportStatus = 'Export ready!';
+                        this.exportStatusType = 'success';
+                        if (status.file_id) {
+                            this.downloadUrl = patientService.getExportDownloadUrl(status.file_id);
+                        }
+                        return;
+                    } else if (status.status === 'failed') {
+                        this.exportStatus = 'Export failed: ' + (status.error || 'Unknown error');
+                        this.exportStatusType = 'danger';
+                        return;
+                    } else if (attempts < maxAttempts) {
+                        this.exportStatus = `Processing... ${status.progress || 0}%`;
+                        setTimeout(poll, 2000);
+                    } else {
+                        this.exportStatus = 'Export is taking longer than expected. Check back later.';
+                        this.exportStatusType = 'warning';
+                    }
+                } catch (error) {
+                    this.exportStatus = 'Error checking status: ' + error.message;
+                    this.exportStatusType = 'warning';
+                }
+            };
+
+            poll();
         },
 
         formatDate(dateStr) {

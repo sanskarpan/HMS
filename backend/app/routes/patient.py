@@ -677,3 +677,149 @@ def get_treatment_details(treatment_id):
         'success': True,
         'treatment': result
     }), 200
+
+
+# =============================================================================
+# CSV Export (Asynchronous with Celery)
+# =============================================================================
+
+@patient_bp.route('/export-history', methods=['POST'])
+@patient_required
+def trigger_export():
+    """Trigger asynchronous CSV export of patient's treatment history."""
+    patient = get_current_patient()
+    if not patient:
+        return jsonify({'success': False, 'message': 'Patient profile not found'}), 404
+
+    try:
+        from backend.app.tasks.exports import export_patient_history_csv
+
+        # Trigger the async task
+        task = export_patient_history_csv.delay(patient.id, notify=True)
+
+        return jsonify({
+            'success': True,
+            'message': 'Export started. You will be notified when ready.',
+            'task_id': task.id
+        }), 202
+    except Exception as e:
+        # If Celery/Redis is not available, do synchronous export
+        return _sync_export(patient)
+
+
+def _sync_export(patient):
+    """Fallback synchronous export when Celery is not available."""
+    import csv
+    import io
+    from flask import Response
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Write header
+    writer.writerow([
+        'User ID', 'Username', 'Patient Name', 'Consulting Doctor',
+        'Department', 'Appointment Date', 'Appointment Time', 'Status',
+        'Visit Type', 'Diagnosis', 'Prescription', 'Tests Recommended',
+        'Notes', 'Follow-up Date'
+    ])
+
+    # Get appointments
+    appointments = Appointment.query.filter(
+        Appointment.patient_id == patient.id
+    ).order_by(Appointment.appointment_date.desc()).all()
+
+    for apt in appointments:
+        treatment = Treatment.query.filter_by(appointment_id=apt.id).first()
+        doctor = apt.doctor
+
+        writer.writerow([
+            patient.user.id if patient.user else '',
+            patient.user.username if patient.user else '',
+            patient.full_name,
+            doctor.full_name if doctor else 'N/A',
+            doctor.department.name if doctor and doctor.department else 'N/A',
+            apt.appointment_date.strftime('%Y-%m-%d'),
+            apt.appointment_time.strftime('%H:%M'),
+            apt.status,
+            treatment.visit_type if treatment else 'N/A',
+            treatment.diagnosis if treatment else 'N/A',
+            treatment.prescription if treatment else 'N/A',
+            treatment.tests_recommended if treatment else 'N/A',
+            treatment.notes if treatment else 'N/A',
+            treatment.follow_up_date.strftime('%Y-%m-%d') if treatment and treatment.follow_up_date else 'N/A'
+        ])
+
+    # Return CSV response
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={
+            'Content-Disposition': f'attachment; filename=patient_history_{patient.id}.csv'
+        }
+    )
+
+
+@patient_bp.route('/export-status/<task_id>', methods=['GET'])
+@patient_required
+def check_export_status(task_id):
+    """Check the status of an export task."""
+    patient = get_current_patient()
+    if not patient:
+        return jsonify({'success': False, 'message': 'Patient profile not found'}), 404
+
+    try:
+        from backend.app.tasks.exports import get_export_status
+        status = get_export_status(task_id)
+
+        return jsonify({
+            'success': True,
+            'task_id': task_id,
+            **status
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error checking status: {str(e)}'
+        }), 500
+
+
+@patient_bp.route('/download-export/<file_id>', methods=['GET'])
+@patient_required
+def download_export(file_id):
+    """Download an exported CSV file."""
+    patient = get_current_patient()
+    if not patient:
+        return jsonify({'success': False, 'message': 'Patient profile not found'}), 404
+
+    try:
+        from backend.app.tasks.exports import get_export_file
+        from flask import send_file
+
+        filepath, filename = get_export_file(file_id)
+
+        if not filepath or not filename:
+            return jsonify({
+                'success': False,
+                'message': 'Export file not found or expired'
+            }), 404
+
+        # Verify the file belongs to this patient
+        if f'patient_{patient.id}_' not in filename:
+            return jsonify({
+                'success': False,
+                'message': 'Unauthorized access to export'
+            }), 403
+
+        return send_file(
+            filepath,
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error downloading export: {str(e)}'
+        }), 500
