@@ -24,3 +24,6 @@ Hospitals need efficient systems to manage patients, doctors, appointments, and 
 
 ## Milestone 7: Backend Jobs - Daily Reminders & Monthly Reports
 **Progress: 10%**
+
+## Milestone 8: API Performance Optimization & Caching
+**Progress: 5%**
